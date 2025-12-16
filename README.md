@@ -172,31 +172,15 @@ api-service
 | `envseal diff REPO` | Show key-only changes | `--env ENV` |
 | `envseal pull REPO` | Decrypt and pull from vault | `--env ENV`, `--replace`, `--stdout` |
 
-## 🚀 AI Coding Quick Recovery
+## 🚀 New Machine? Restore Everything in 10 Minutes
 
-**Scenario: Restore all project environments on a new machine in 10 minutes**
+Just 4 steps:
+1. 📋 Copy age private key (from password manager)
+2. 📦 Clone your secrets vault repository
+3. 🔧 Install EnvSeal: `pipx install envseal-vault`
+4. ⬇️ Pull secrets: `envseal pull <project> --env <environment> --replace`
 
-```bash
-# 1. Copy age private key from your password manager
-mkdir -p ~/Library/Application\ Support/sops/age/
-nano ~/Library/Application\ Support/sops/age/keys.txt
-# Paste the 3-line key file
-chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
-
-# 2. Clone YOUR secrets vault (NOT the envseal tool repo!)
-#    This is your private repo where encrypted .env files are stored
-git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
-
-# 3. Install EnvSeal tool
-pipx install envseal-vault
-
-# 4. Pull all environments
-envseal pull my-api --env prod --replace
-envseal pull my-web --env dev --replace
-envseal pull my-worker --env staging --replace
-
-# Done! All .env files restored
-```
+See detailed steps in the "Multi-Device Setup" section below 👇
 
 ## 🔐 Security
 

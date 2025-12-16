@@ -58,7 +58,7 @@ EnvSeal 是一个 CLI 工具，帮助你**端到端加密**管理多个项目的
 
 ## ⚡ 快速开始
 
-### 📋 首次使用完整流程（小白友好）
+### 📋 首次使用完整流程（新手向）
 
 **第一步：创建你的 secrets vault 仓库**
 
@@ -172,31 +172,15 @@ api-service
 | `envseal diff REPO` | 查看某个仓库的 key 变化 | `--env ENV` |
 | `envseal pull REPO` | 从 vault 解密并拉取 | `--env ENV`, `--replace`, `--stdout` |
 
-## 🚀 AI Coding 快速恢复
+## 🚀 换新电脑？10 分钟恢复所有环境
 
-**场景：新电脑 10 分钟恢复所有项目环境**
+只需 4 步：
+1. 📋 复制 age 私钥（从密码管理器）
+2. 📦 克隆你的 secrets vault 仓库
+3. 🔧 安装 EnvSeal：`pipx install envseal-vault`
+4. ⬇️ 拉取密钥：`envseal pull <项目名> --env <环境> --replace`
 
-```bash
-# 1. 从密码管理器复制 age 私钥
-mkdir -p ~/Library/Application\ Support/sops/age/
-nano ~/Library/Application\ Support/sops/age/keys.txt
-# 粘贴 3 行密钥文件
-chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
-
-# 2. 克隆你的 secrets vault（不是 envseal 工具仓库！）
-#    这是你存放加密 .env 文件的私有仓库
-git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
-
-# 3. 安装 EnvSeal 工具
-pipx install envseal-vault
-
-# 4. 拉取所有环境
-envseal pull my-api --env prod --replace
-envseal pull my-web --env dev --replace
-envseal pull my-worker --env staging --replace
-
-# 完成！所有 .env 文件已恢复
-```
+详细步骤见下方「多设备同步」章节 👇
 
 ## 🔐 安全说明
 
