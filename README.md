@@ -2,9 +2,10 @@
 
 # 🔐 EnvSeal
 
-**Secure, centralized management for environment variables across multiple projects**
+**Secure, centralized environment variable management for the AI coding era**
 
 [![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/pypi/v/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
@@ -14,23 +15,46 @@
 
 ---
 
+## 🤖 Why EnvSeal for AI Coding?
+
+**The reality of AI-powered development: project explosion**
+
+Working with Claude Code, Cursor, Gemini CLI, or Windsurf? You know the drill:
+- 🚀 Today: 3 new demos
+- 🎯 Tomorrow: 5 more repos
+- 📂 Each one: `.env`, `.env.dev`, `.env.prod`
+
+**Then what happens?**
+
+- 💔 **Migration Pain**: Switching machines? The hardest part isn't code—it's "where are all those .env files?"
+- 🔀 **Sync Chaos**: Updated `DATABASE_URL` in project A, forgot about project B
+- ⚠️ **Leakage Risk**: AI screenshots, logs, and shares easily expose secrets
+- 🚫 **Onboarding Nightmare**: New developer clones in 30 seconds, spends 3 hours hunting for credentials
+
+**EnvSeal's Solution:**
+```
+Scan repos → Normalize .env → Encrypt with SOPS → Unified Git vault → One-command recovery
+```
+
 ## 📖 What is EnvSeal?
 
 EnvSeal is a CLI tool that helps you manage `.env` files across multiple repositories with **end-to-end encryption**. It scans your projects, normalizes environment files, and syncs them to a Git-backed vault using SOPS encryption.
 
 **Key Benefits:**
-- 🔒 **Secure**: Uses SOPS + age encryption (modern, battle-tested)
-- 📦 **Centralized**: One vault for all your secrets across all projects
-- 🔍 **Safe Diffs**: Only shows key names, never values
+- 🔒 **Secure**: SOPS + age encryption (modern, battle-tested)
+- 📦 **Centralized**: One vault for all secrets across unlimited projects
+- 🔍 **Safe Diffs**: Key-only diffs never expose values
 - 🔄 **Version Control**: Full Git history for audit and rollback
 - 🚀 **Simple**: One command to sync everything
+- 💻 **Multi-Device**: Restore entire dev environment in minutes
 
 ## 🎯 Use Cases
 
-- **Individual Developers**: Manage secrets across 10+ personal projects
-- **Multi-Device Setup**: Sync secrets between work laptop and home desktop
-- **Team Collaboration**: Share secrets securely via private Git repo
-- **Secret Rotation**: Track when and why secrets changed with Git history
+- 🤖 **AI Coding / Vibe Coding**: Using Claude Code/Cursor? Manage 10+ projects without env chaos
+- 💻 **Multi-Device Development**: Work laptop ↔ Home desktop ↔ GitHub Codespaces
+- 🔄 **Environment Migration**: New machine? One command restores all project secrets
+- 👥 **Team Collaboration**: Share secrets securely via private vault (supports multiple age keys)
+- 🔐 **Secret Rotation**: Git history tracks "who changed what key and why"
 
 ## ⚡ Quick Start
 
@@ -47,21 +71,16 @@ sops --version
 
 ### Installation
 
-**Currently in development - install from source:**
-
 ```bash
-# Clone the repository
-git clone https://github.com/chicogong/envseal.git
-cd envseal
-
-# Install globally with pipx (recommended)
-pipx install .
+# Install with pipx (recommended)
+pipx install envseal-vault
 
 # Or with pip
-pip install .
-```
+pip install envseal-vault
 
-> **Note**: PyPI package coming soon. Once published, you'll be able to install with `pipx install envseal`.
+# Verify
+envseal --version
+```
 
 ### Initialize
 
@@ -118,6 +137,31 @@ api-service
 | `envseal diff REPO` | Show key-only changes | `--env ENV` |
 | `envseal pull REPO` | Decrypt and pull from vault | `--env ENV`, `--replace`, `--stdout` |
 
+## 🚀 AI Coding Quick Recovery
+
+**Scenario: Restore all project environments on a new machine in 10 minutes**
+
+```bash
+# 1. Copy age private key from your password manager
+mkdir -p ~/Library/Application\ Support/sops/age/
+nano ~/Library/Application\ Support/sops/age/keys.txt
+# Paste the 3-line key file
+chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
+
+# 2. Clone your vault
+git clone git@github.com:USERNAME/secrets-vault.git
+
+# 3. Install EnvSeal
+pipx install envseal-vault
+
+# 4. Pull all environments
+envseal pull my-api --env prod --replace
+envseal pull my-web --env dev --replace
+envseal pull my-worker --env staging --replace
+
+# Done! All .env files restored
+```
+
 ## 🔐 Security
 
 **Age Key Management:**
@@ -132,9 +176,15 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 # Save to password manager (1Password, Bitwarden, etc.)
 ```
 
-⚠️ **Warning**: Losing your private key = permanent data loss!
+⚠️ **Critical**: Losing your private key = permanent data loss!
 
-See [SECURITY.md](SECURITY.md) for details.
+**Vault Repository Best Practices:**
+- ✅ Keep vault repository **private** (even though files are encrypted)
+- ✅ Enable branch protection and require PR reviews
+- ✅ Use GitHub's secret scanning push protection
+- ✅ Backup private key in password manager
+
+See [SECURITY.md](SECURITY.md) for complete security model.
 
 ## 🌍 Multi-Device Setup
 
@@ -151,7 +201,7 @@ See [SECURITY.md](SECURITY.md) for details.
 2. Clone vault and install:
    ```bash
    git clone git@github.com:USERNAME/secrets-vault.git
-   pipx install envseal
+   pipx install envseal-vault
    envseal init
    ```
 
@@ -214,6 +264,7 @@ make type-check
 
 - [USAGE.md](USAGE.md) - Complete usage guide (Chinese)
 - [SECURITY.md](SECURITY.md) - Security model and best practices
+- [PUBLISHING.md](PUBLISHING.md) - Guide for publishing to PyPI
 
 ## 🤝 Contributing
 
@@ -227,8 +278,8 @@ Apache-2.0 License - see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Made with ❤️ by developers, for developers**
+**Built for developers navigating the AI coding era**
 
-[Report Bug](https://github.com/chicogong/envseal/issues) · [Request Feature](https://github.com/chicogong/envseal/issues)
+[PyPI](https://pypi.org/project/envseal-vault/) · [Report Bug](https://github.com/chicogong/envseal/issues) · [Request Feature](https://github.com/chicogong/envseal/issues)
 
 </div>

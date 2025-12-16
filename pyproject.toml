@@ -1,11 +1,26 @@
 [project]
 name = "envseal-vault"
 version = "0.1.0"
-description = "CLI tool for managing encrypted .env files across multiple repositories"
+description = "Secure, centralized environment variable management for AI coding era - SOPS + age encryption for multi-project .env files"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
-keywords = ["env", "environment", "secrets", "sops", "age", "encryption", "dotenv", "vault"]
+keywords = [
+    "env",
+    "environment",
+    "secrets",
+    "sops",
+    "age",
+    "encryption",
+    "dotenv",
+    "vault",
+    "ai-coding",
+    "vibe-coding",
+    "claude-code",
+    "cursor",
+    "multi-project",
+    "secret-management"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
