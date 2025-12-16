@@ -73,16 +73,31 @@ class Config:
 
     def save(self, path: Path) -> None:
         """Save config to YAML file."""
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            yaml.dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w") as f:
+                yaml.dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)
+        except OSError as e:
+            raise OSError(f"Failed to save config to {path}: {e}")
 
     @classmethod
     def load(cls, path: Path) -> "Config":
         """Load config from YAML file."""
-        with open(path) as f:
-            data = yaml.safe_load(f)
-        return cls.from_dict(data)
+        try:
+            with open(path) as f:
+                data = yaml.safe_load(f)
+
+            if not data:
+                raise ValueError(f"Config file is empty or invalid: {path}")
+
+            if "vault_path" not in data:
+                raise ValueError("Config file missing required field: vault_path")
+
+            return cls.from_dict(data)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Config file not found: {path}")
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in config file: {e}")
 
     @classmethod
     def get_config_path(cls) -> Path:
