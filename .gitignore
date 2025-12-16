@@ -184,4 +184,9 @@ cython_debug/
 .worktrees/
 
 # Claude Code configuration
-.claude/
+.claude/.build-venv/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

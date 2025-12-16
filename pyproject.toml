@@ -5,14 +5,38 @@ description = "CLI tool for managing encrypted .env files across multiple reposi
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
+keywords = ["env", "environment", "secrets", "sops", "age", "encryption", "dotenv", "vault"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "chicogong" }
+]
+maintainers = [
+    { name = "chicogong" }
 ]
 dependencies = [
     "typer[all]>=0.9.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chicogong/envseal"
+Repository = "https://github.com/chicogong/envseal"
+Issues = "https://github.com/chicogong/envseal/issues"
+Documentation = "https://github.com/chicogong/envseal/blob/master/README.md"
 
 [project.optional-dependencies]
 dev = [
