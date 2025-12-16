@@ -1,17 +1,17 @@
 """Calculate diffs between .env files (key-only)."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Set
-from dotenv import dotenv_values
 from io import StringIO
+
+from dotenv import dotenv_values
 
 
 @dataclass
 class DiffResult:
     """Result of a diff calculation."""
-    added: Set[str] = field(default_factory=set)
-    removed: Set[str] = field(default_factory=set)
-    modified: Set[str] = field(default_factory=set)
+    added: set[str] = field(default_factory=set)
+    removed: set[str] = field(default_factory=set)
+    modified: set[str] = field(default_factory=set)
 
     def is_clean(self) -> bool:
         """Check if there are no changes."""
@@ -45,6 +45,6 @@ class DiffCalculator:
 
         return DiffResult(added=added, removed=removed, modified=modified)
 
-    def _parse_content(self, content: str) -> Dict[str, str]:
+    def _parse_content(self, content: str) -> dict[str, str]:
         """Parse .env content string to dictionary."""
         return dict(dotenv_values(stream=StringIO(content)))

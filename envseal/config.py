@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+
 import yaml
 
 
@@ -20,17 +20,17 @@ class Repo:
 @dataclass
 class ScanConfig:
     """Scan configuration."""
-    include_patterns: List[str] = field(default_factory=lambda: [".env", ".env.*"])
-    exclude_patterns: List[str] = field(default_factory=lambda: [".env.example", ".env.sample"])
-    ignore_dirs: List[str] = field(default_factory=lambda: [".git", "node_modules", "venv", ".venv"])
+    include_patterns: list[str] = field(default_factory=lambda: [".env", ".env.*"])
+    exclude_patterns: list[str] = field(default_factory=lambda: [".env.example", ".env.sample"])
+    ignore_dirs: list[str] = field(default_factory=lambda: [".git", "node_modules", "venv", ".venv"])
 
 
 @dataclass
 class Config:
     """Main configuration for envseal."""
     vault_path: Path
-    repos: List[Repo] = field(default_factory=list)
-    env_mapping: Dict[str, str] = field(default_factory=lambda: {
+    repos: list[Repo] = field(default_factory=list)
+    env_mapping: dict[str, str] = field(default_factory=lambda: {
         ".env": "local",
         ".env.dev": "dev",
         ".env.development": "dev",

@@ -1,6 +1,7 @@
 """Vault repository management."""
 
 from pathlib import Path
+
 from envseal.config import Config
 
 

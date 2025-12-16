@@ -1,11 +1,11 @@
 """End-to-end integration tests."""
 
-import os
 import shutil
 from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
-from envseal.cli import app
+
 from envseal.config import Config, Repo
 from envseal.crypto import AgeKeyManager
 
@@ -85,8 +85,8 @@ def test_encryption_decryption_workflow(temp_dir):
     public_key = key_manager.generate_key(key_file)
 
     # Test encryption
-    from envseal.sops import SopsManager
     from envseal.dotenvio import DotEnvIO
+    from envseal.sops import SopsManager
 
     sops = SopsManager(age_public_key=public_key, age_key_file=key_file)
     dotenv_io = DotEnvIO()
@@ -135,8 +135,8 @@ def test_scanner_and_vault_integration(temp_dir):
     (repo_path / ".env.example").write_text("KEY=example\n")  # Should be excluded
 
     # Scan
-    from envseal.scanner import Scanner
     from envseal.config import ScanConfig
+    from envseal.scanner import Scanner
 
     scanner = Scanner(ScanConfig())
     env_files = scanner.scan_repo(repo_path)

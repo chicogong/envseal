@@ -1,17 +1,18 @@
 """Command-line interface for envseal."""
 
-import typer
-from typing import Optional
 from pathlib import Path
+from typing import Optional
+
+import typer
 from rich.console import Console
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 
 from envseal import __version__
 from envseal.config import Config, Repo
 from envseal.crypto import AgeKeyManager
 from envseal.scanner import Scanner
-from envseal.vault import VaultManager
 from envseal.sops import SopsManager
+from envseal.vault import VaultManager
 
 app = typer.Typer(
     name="envseal",
@@ -67,7 +68,7 @@ def init(
         console.print("No age key found. Generating new key...")
         public_key = key_manager.generate_key(key_path)
         console.print(f"✅ Age key created: {key_path}")
-        console.print(f"\n⚠️  [yellow]IMPORTANT: Back up this key! You'll need it on other devices.[/yellow]")
+        console.print("\n⚠️  [yellow]IMPORTANT: Back up this key! You'll need it on other devices.[/yellow]")
         console.print(f"Public key: [cyan]{public_key}[/cyan]")
 
     # 2. Scan for repositories
@@ -112,7 +113,7 @@ def init(
     if not sops_yaml_path.exists():
         sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
         sops.create_sops_yaml(sops_yaml_path)
-        console.print(f"✅ Created .sops.yaml in vault")
+        console.print("✅ Created .sops.yaml in vault")
 
     console.print("\n✅ [bold green]Initialization complete![/bold green]")
     console.print("\n📦 Next steps:")
@@ -204,7 +205,7 @@ def push(
             console.print(f"  ✓ {env_file.filename} → {env_name}.env")
 
     console.print("\n✅ [bold green]Push complete![/bold green]")
-    console.print(f"\n📦 Next steps:")
+    console.print("\n📦 Next steps:")
     console.print(f"  1. cd {config.vault_path}")
     console.print("  2. git add .")
     console.print("  3. git commit -m 'Update secrets'")
@@ -234,8 +235,8 @@ def status():
     vault_manager = VaultManager(config)
     sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
 
-    from envseal.dotenvio import DotEnvIO
     from envseal.diffing import DiffCalculator
+    from envseal.dotenvio import DotEnvIO
 
     dotenv_io = DotEnvIO()
     diff_calc = DiffCalculator()
@@ -298,8 +299,8 @@ def diff(
     vault_manager = VaultManager(config)
     sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
 
-    from envseal.dotenvio import DotEnvIO
     from envseal.diffing import DiffCalculator
+    from envseal.dotenvio import DotEnvIO
 
     dotenv_io = DotEnvIO()
     diff_calc = DiffCalculator()
@@ -318,7 +319,7 @@ def diff(
     # Get vault file
     vault_path = vault_manager.get_vault_path(repo_name, env)
     if not vault_path.exists():
-        console.print(f"[yellow]File not in vault yet. All keys are new.[/yellow]")
+        console.print("[yellow]File not in vault yet. All keys are new.[/yellow]")
         raise typer.Exit(0)
 
     # Calculate diff
@@ -422,7 +423,7 @@ def pull(
         temp_file.write_text(decrypted)
 
         console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
-        console.print(f"\n⚠️  Temporary file will be deleted when process ends.")
+        console.print("\n⚠️  Temporary file will be deleted when process ends.")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Tests for CLI interface."""
 
 from typer.testing import CliRunner
-import pytest
+
 from envseal.cli import app
 
 runner = CliRunner()

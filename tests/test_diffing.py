@@ -1,7 +1,5 @@
 """Tests for diff and status operations."""
 
-from pathlib import Path
-import pytest
 from envseal.diffing import DiffCalculator, DiffResult
 
 

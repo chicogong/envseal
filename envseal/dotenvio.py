@@ -1,14 +1,14 @@
 """Parse and normalize .env files."""
 
 from pathlib import Path
-from typing import Dict
+
 from dotenv import dotenv_values
 
 
 class DotEnvIO:
     """Handle .env file I/O with normalization."""
 
-    def parse(self, filepath: Path) -> Dict[str, str]:
+    def parse(self, filepath: Path) -> dict[str, str]:
         """Parse .env file to dictionary."""
         try:
             if not filepath.exists():
@@ -24,7 +24,7 @@ class DotEnvIO:
         data = self.parse(filepath)
         return self._dict_to_dotenv(data)
 
-    def write(self, filepath: Path, data: Dict[str, str]) -> None:
+    def write(self, filepath: Path, data: dict[str, str]) -> None:
         """Write normalized .env file."""
         try:
             content = self._dict_to_dotenv(data)
@@ -33,7 +33,7 @@ class DotEnvIO:
         except OSError as e:
             raise OSError(f"Failed to write to {filepath}: {e}")
 
-    def _dict_to_dotenv(self, data: Dict[str, str]) -> str:
+    def _dict_to_dotenv(self, data: dict[str, str]) -> str:
         """Convert dictionary to normalized dotenv format."""
         lines = []
 

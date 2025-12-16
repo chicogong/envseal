@@ -1,8 +1,9 @@
 """Tests for cryptographic key management."""
 
-from pathlib import Path
 import subprocess
+
 import pytest
+
 from envseal.crypto import AgeKeyManager
 
 

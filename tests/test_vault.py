@@ -1,9 +1,9 @@
 """Tests for vault management."""
 
 from pathlib import Path
-import pytest
+
+from envseal.config import Config
 from envseal.vault import VaultManager
-from envseal.config import Config, Repo
 
 
 def test_get_vault_path_for_env(temp_dir):

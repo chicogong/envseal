@@ -1,9 +1,7 @@
 """Tests for repository and .env file scanning."""
 
-from pathlib import Path
-import pytest
-from envseal.scanner import Scanner, EnvFile
-from envseal.config import Config, ScanConfig
+from envseal.config import ScanConfig
+from envseal.scanner import Scanner
 
 
 def test_scanner_finds_env_files(mock_repo):
