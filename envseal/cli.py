@@ -211,5 +211,65 @@ def push(
     console.print("  4. git push")
 
 
+@app.command()
+def status():
+    """Show status of secrets compared to vault."""
+    console.print("📊 [bold]Checking secrets status...[/bold]\n")
+
+    # Load config
+    config_path = Config.get_config_path()
+    if not config_path.exists():
+        console.print("[red]Config not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
+
+    config = Config.load(config_path)
+
+    # Get age key
+    key_manager = AgeKeyManager()
+    key_path = key_manager.get_default_key_path()
+    public_key = key_manager.get_public_key(key_path)
+
+    # Initialize managers
+    scanner = Scanner(config.scan)
+    vault_manager = VaultManager(config)
+    sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
+
+    from envseal.dotenvio import DotEnvIO
+    from envseal.diffing import DiffCalculator
+
+    dotenv_io = DotEnvIO()
+    diff_calc = DiffCalculator()
+
+    # Process each repo
+    for repo in config.repos:
+        console.print(f"[cyan]{repo.name}[/cyan]")
+
+        env_files = scanner.scan_repo(repo.path)
+
+        for env_file in env_files:
+            env_name = vault_manager.map_env_filename(env_file.filename)
+            vault_path = vault_manager.get_vault_path(repo.name, env_name)
+
+            if not vault_path.exists():
+                console.print(f"  + [yellow]{env_file.filename}[/yellow] - new file (not in vault)")
+                continue
+
+            # Compare with vault
+            local_normalized = dotenv_io.normalize(env_file.filepath)
+            vault_decrypted = sops.decrypt(vault_path)
+
+            diff = diff_calc.calculate(vault_decrypted, local_normalized)
+
+            if diff.is_clean():
+                console.print(f"  ✓ [green]{env_file.filename}[/green] - up to date")
+            else:
+                num_changes = len(diff.added) + len(diff.removed) + len(diff.modified)
+                console.print(f"  ⚠ [yellow]{env_file.filename}[/yellow] - {num_changes} keys changed")
+
+        console.print()
+
+    console.print("Use [cyan]'envseal diff <repo>'[/cyan] to see details.")
+
+
 if __name__ == "__main__":
     app()
