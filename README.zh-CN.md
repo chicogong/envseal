@@ -58,6 +58,38 @@ EnvSeal 是一个 CLI 工具，帮助你**端到端加密**管理多个项目的
 
 ## ⚡ 快速开始
 
+### 📋 首次使用完整流程（小白友好）
+
+**第一步：创建你的 secrets vault 仓库**
+
+1. 打开 GitHub，创建一个**新的私有仓库**
+   - 仓库名建议：`secrets-vault` 或 `my-secrets`
+   - ⚠️ **必须设为 Private（私有）**
+   - 不要添加 README、.gitignore 等文件（创建空仓库）
+
+2. 克隆到本地：
+   ```bash
+   # 替换 USERNAME 为你的 GitHub 用户名
+   # 替换 secrets-vault 为你刚创建的仓库名
+   cd ~/Github  # 或你习惯存放代码的目录
+   git clone git@github.com:USERNAME/secrets-vault.git
+   ```
+
+**第二步：找到你的"项目最上层目录"**
+
+这是指**包含你所有项目的那个文件夹**，例如：
+```
+~/Github/                    ← 这就是"最上层目录"
+├── my-api/                 ← 项目1（有 .env 文件）
+├── my-web/                 ← 项目2（有 .env 文件）
+├── my-worker/              ← 项目3（有 .env 文件）
+└── secrets-vault/          ← 你刚创建的 vault 仓库
+```
+
+**第三步：安装并初始化 EnvSeal**
+
+继续按下面的步骤操作 👇
+
 ### 安装依赖
 
 ```bash
@@ -85,15 +117,18 @@ envseal --version
 ### 初始化
 
 ```bash
-cd ~/your-projects-directory
+# 进入你的"项目最上层目录"（就是包含所有项目的那个文件夹）
+cd ~/Github  # 替换为你实际的目录，比如 ~/projects 或 ~/code
+
+# 运行初始化
 envseal init
 ```
 
-初始化会：
+初始化时会问你几个问题：
 1. ✅ 生成 age 加密密钥
-2. 🔍 扫描 Git 仓库
+2. 🔍 扫描当前目录下的所有 Git 仓库（会自动找到 my-api、my-web 等项目）
 3. 📝 创建配置文件 `~/.config/envseal/config.yaml`
-4. 🗂️ 设置 vault 结构
+4. 🗂️ 询问你的 vault 路径（输入：`~/Github/secrets-vault`）
 
 ### 同步密钥
 

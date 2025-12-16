@@ -58,6 +58,38 @@ EnvSeal is a CLI tool that helps you manage `.env` files across multiple reposit
 
 ## ⚡ Quick Start
 
+### 📋 Complete First-Time Setup (Beginner-Friendly)
+
+**Step 1: Create Your Secrets Vault Repository**
+
+1. Go to GitHub and create a **new private repository**
+   - Repository name suggestions: `secrets-vault` or `my-secrets`
+   - ⚠️ **Must be Private**
+   - Don't add README, .gitignore, etc. (create empty repo)
+
+2. Clone it locally:
+   ```bash
+   # Replace USERNAME with your GitHub username
+   # Replace secrets-vault with your repository name
+   cd ~/Github  # Or wherever you keep your code
+   git clone git@github.com:USERNAME/secrets-vault.git
+   ```
+
+**Step 2: Locate Your "Projects Root Directory"**
+
+This is the **folder that contains all your projects**, for example:
+```
+~/Github/                    ← This is your "root directory"
+├── my-api/                 ← Project 1 (has .env files)
+├── my-web/                 ← Project 2 (has .env files)
+├── my-worker/              ← Project 3 (has .env files)
+└── secrets-vault/          ← Your vault repo you just created
+```
+
+**Step 3: Install and Initialize EnvSeal**
+
+Continue with the steps below 👇
+
 ### Prerequisites
 
 ```bash
@@ -85,15 +117,18 @@ envseal --version
 ### Initialize
 
 ```bash
-cd ~/your-projects-directory
+# Navigate to your "projects root directory" (the folder containing all your projects)
+cd ~/Github  # Replace with your actual directory, e.g., ~/projects or ~/code
+
+# Run initialization
 envseal init
 ```
 
-This will:
+During initialization, it will:
 1. ✅ Generate an age encryption key
-2. 🔍 Scan for Git repositories
+2. 🔍 Scan current directory for all Git repositories (finds my-api, my-web, etc.)
 3. 📝 Create configuration at `~/.config/envseal/config.yaml`
-4. 🗂️ Set up vault structure
+4. 🗂️ Ask for your vault path (enter: `~/Github/secrets-vault`)
 
 ### Sync Secrets
 
