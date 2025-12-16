@@ -78,7 +78,9 @@ def init(
         root_dir = Path.cwd()
 
     console.print(f"\n🔍 Scanning for Git repositories in {root_dir}...")
-    scanner = Scanner(Config().scan)
+    from envseal.config import ScanConfig
+
+    scanner = Scanner(ScanConfig())
     repos = scanner.find_git_repos(root_dir)
 
     if not repos:
