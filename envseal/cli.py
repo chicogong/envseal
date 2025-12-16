@@ -353,5 +353,77 @@ def diff(
     console.print(f"Use [cyan]'envseal push {repo_name} --env {env}'[/cyan] to sync.")
 
 
+@app.command()
+def pull(
+    repo_name: str = typer.Argument(..., help="Repository name"),
+    env: str = typer.Option("prod", "--env", help="Environment to pull"),
+    replace: bool = typer.Option(False, "--replace", help="Replace local .env file"),
+    stdout: bool = typer.Option(False, "--stdout", help="Output to stdout"),
+):
+    """Pull and decrypt secrets from vault."""
+    # Load config
+    config_path = Config.get_config_path()
+    config = Config.load(config_path)
+
+    # Find repo
+    repo = next((r for r in config.repos if r.name == repo_name), None)
+    if not repo:
+        console.print(f"[red]Repository '{repo_name}' not found.[/red]")
+        raise typer.Exit(1)
+
+    # Get managers
+    key_manager = AgeKeyManager()
+    key_path = key_manager.get_default_key_path()
+    public_key = key_manager.get_public_key(key_path)
+
+    vault_manager = VaultManager(config)
+    sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
+
+    # Get vault file
+    vault_path = vault_manager.get_vault_path(repo_name, env)
+    if not vault_path.exists():
+        console.print(f"[red]No vault file for {repo_name}/{env}[/red]")
+        raise typer.Exit(1)
+
+    # Decrypt
+    decrypted = sops.decrypt(vault_path)
+
+    if stdout:
+        # Output to stdout
+        console.print(decrypted, end='')
+    elif replace:
+        # Replace local file
+        # Find the corresponding local file
+        env_filename = None
+        for pattern, mapped_env in config.env_mapping.items():
+            if mapped_env == env:
+                env_filename = pattern
+                break
+
+        if not env_filename:
+            env_filename = f".env.{env}"
+
+        local_path = repo.path / env_filename
+
+        # Backup existing file
+        if local_path.exists():
+            backup_path = local_path.with_suffix(local_path.suffix + '.backup')
+            import shutil
+            shutil.copy2(local_path, backup_path)
+            console.print(f"✓ Backed up to {backup_path}")
+
+        local_path.write_text(decrypted)
+        console.print(f"✅ Pulled to {local_path}")
+    else:
+        # Write to temp directory
+        import tempfile
+        temp_dir = Path(tempfile.mkdtemp(prefix="envseal-"))
+        temp_file = temp_dir / f"{env}.env"
+        temp_file.write_text(decrypted)
+
+        console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
+        console.print(f"\n⚠️  Temporary file will be deleted when process ends.")
+
+
 if __name__ == "__main__":
     app()
