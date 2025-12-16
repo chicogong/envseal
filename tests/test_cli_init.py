@@ -1,8 +1,7 @@
 """Integration tests for init command."""
 
-from pathlib import Path
-import pytest
 from typer.testing import CliRunner
+
 from envseal.cli import app
 
 runner = CliRunner()
@@ -10,7 +9,7 @@ runner = CliRunner()
 
 def test_init_creates_config(temp_dir, monkeypatch):
     """Test init command creates configuration."""
-    config_path = temp_dir / "config.yaml"
+    temp_dir / "config.yaml"
     vault_path = temp_dir / "vault"
     vault_path.mkdir()
 

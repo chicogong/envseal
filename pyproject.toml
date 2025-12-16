@@ -85,6 +85,8 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
+    "B008",   # function calls in default arguments (Typer pattern)
+    "B904",   # raise from within except (our exception handling is intentional)
 ]
 
 [tool.ruff.lint.per-file-ignores]

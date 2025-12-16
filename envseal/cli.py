@@ -23,7 +23,7 @@ app = typer.Typer(
 console = Console()
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
         typer.echo(f"envseal version {__version__}")
@@ -40,7 +40,7 @@ def main(
         is_eager=True,
         help="Show version and exit",
     ),
-):
+) -> None:
     """EnvSeal - Manage encrypted .env files across repositories."""
     pass
 
@@ -52,7 +52,7 @@ def init(
         "--root",
         help="Root directory to scan for repositories",
     ),
-):
+) -> None:
     """Initialize envseal configuration."""
     console.print("🔍 [bold]Initializing envseal...[/bold]")
 
@@ -138,7 +138,7 @@ def push(
         "--env",
         help="Only push specific environment (e.g., prod)",
     ),
-):
+) -> None:
     """Push .env files to vault and encrypt with SOPS."""
     console.print("🔄 [bold]Pushing secrets to vault...[/bold]")
 
@@ -219,7 +219,7 @@ def push(
 
 
 @app.command()
-def status():
+def status() -> None:
     """Show status of secrets compared to vault."""
     console.print("📊 [bold]Checking secrets status...[/bold]\n")
 
@@ -284,7 +284,7 @@ def status():
 def diff(
     repo_name: str = typer.Argument(..., help="Repository name"),
     env: str = typer.Option("prod", "--env", help="Environment to diff"),
-):
+) -> None:
     """Show key-only diff for a specific repo and environment."""
     console.print(f"📝 [bold]Changes in {repo_name}/{env}.env[/bold]\n")
 
@@ -367,7 +367,7 @@ def pull(
     env: str = typer.Option("prod", "--env", help="Environment to pull"),
     replace: bool = typer.Option(False, "--replace", help="Replace local .env file"),
     stdout: bool = typer.Option(False, "--stdout", help="Output to stdout"),
-):
+) -> None:
     """Pull and decrypt secrets from vault."""
     # Load config
     config_path = Config.get_config_path()

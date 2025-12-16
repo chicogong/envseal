@@ -4,7 +4,6 @@ import fnmatch
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 from envseal.config import ScanConfig
 
@@ -32,7 +31,7 @@ class Scanner:
     def __init__(self, scan_config: ScanConfig):
         self.config = scan_config
 
-    def scan_repo(self, repo_path: Path) -> List[EnvFile]:
+    def scan_repo(self, repo_path: Path) -> list[EnvFile]:
         """Scan a repository for .env files."""
         env_files = []
 
@@ -60,7 +59,7 @@ class Scanner:
 
         return env_files
 
-    def find_git_repos(self, root_path: Path) -> List[Path]:
+    def find_git_repos(self, root_path: Path) -> list[Path]:
         """Find all Git repositories under a root path."""
         repos = []
 

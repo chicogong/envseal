@@ -1,8 +1,9 @@
 """Tests for configuration management."""
 
 from pathlib import Path
+
 import pytest
-import yaml
+
 from envseal.config import Config, Repo
 
 

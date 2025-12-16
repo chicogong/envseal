@@ -1,10 +1,11 @@
 """Tests for SOPS encryption wrapper."""
 
-from pathlib import Path
 import subprocess
+
 import pytest
-from envseal.sops import SopsManager
+
 from envseal.crypto import AgeKeyManager
+from envseal.sops import SopsManager
 
 
 # Check if both age-keygen and sops are installed

@@ -1,7 +1,7 @@
 """Tests for .env file parsing and normalization."""
 
-from pathlib import Path
 import pytest
+
 from envseal.dotenvio import DotEnvIO
 
 
@@ -128,7 +128,7 @@ def test_handle_none_values(temp_dir):
     dotenv.write(output, data)
 
     content = output.read_text()
-    lines = content.strip().split("\n")
+    content.strip().split("\n")
 
     assert "KEY1=value1" in content
     assert "KEY2=" in content  # Should be empty string
@@ -167,7 +167,7 @@ def test_empty_value_handling(temp_dir):
     dotenv.write(output, data)
 
     content = output.read_text()
-    lines = content.strip().split("\n")
+    content.strip().split("\n")
 
     assert "EMPTY=" in content
     assert "NOT_EMPTY=value" in content
