@@ -265,7 +265,7 @@ pip install envseal
 #### 初始化
 
 ```bash
-cd ~/你的项目目录
+cd ~/your-projects-directory
 envseal init
 ```
 
@@ -284,7 +284,7 @@ envseal push
 # 提交到 vault
 cd ~/Github/secrets-vault
 git add .
-git commit -m "添加加密的 secrets"
+git commit -m "Add encrypted secrets"
 git push
 ```
 
@@ -349,7 +349,7 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 
 2. 克隆 vault 并安装：
    ```bash
-   git clone git@github.com:你的用户名/secrets-vault.git
+   git clone git@github.com:USERNAME/secrets-vault.git
    pipx install envseal
    envseal init
    ```
