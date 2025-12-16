@@ -101,8 +101,8 @@ envseal init
 # 推送所有 .env 文件到 vault（加密）
 envseal push
 
-# 提交到 vault
-cd ~/Github/secrets-vault
+# 提交到你的 secrets vault（你自己创建的私有仓库）
+cd ~/Github/secrets-vault  # 你的 vault 仓库，不是 envseal 工具仓库
 git add .
 git commit -m "Add encrypted secrets"
 git push
@@ -148,10 +148,11 @@ nano ~/Library/Application\ Support/sops/age/keys.txt
 # 粘贴 3 行密钥文件
 chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 
-# 2. 克隆你的 vault
-git clone git@github.com:USERNAME/secrets-vault.git
+# 2. 克隆你的 secrets vault（不是 envseal 工具仓库！）
+#    这是你存放加密 .env 文件的私有仓库
+git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
 
-# 3. 安装 EnvSeal
+# 3. 安装 EnvSeal 工具
 pipx install envseal-vault
 
 # 4. 拉取所有环境
@@ -188,6 +189,10 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 
 ## 🌍 多设备同步
 
+**你需要了解的两个仓库：**
+- 📦 **EnvSeal 工具仓库**：`chicogong/envseal`（本仓库 - 通过 PyPI 安装，无需克隆）
+- 🔐 **你的 secrets vault**：`USERNAME/my-secrets-vault`（你的私有仓库，存放加密的 .env 文件）
+
 **在新机器上：**
 
 1. 从备份复制 age 密钥：
@@ -198,9 +203,12 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
    chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
    ```
 
-2. 克隆 vault 并安装：
+2. 克隆你的 secrets vault 并安装 EnvSeal 工具：
    ```bash
-   git clone git@github.com:USERNAME/secrets-vault.git
+   # 克隆你的 vault（不是 envseal 工具仓库）
+   git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
+
+   # 从 PyPI 安装 EnvSeal 工具
    pipx install envseal-vault
    envseal init
    ```
@@ -241,8 +249,10 @@ scan:
 
 ## 🛠️ 开发
 
+**仅用于贡献 EnvSeal 工具本身：**
+
 ```bash
-# 克隆仓库
+# 克隆 EnvSeal 工具仓库（用于开发）
 git clone https://github.com/chicogong/envseal.git
 cd envseal
 
@@ -259,6 +269,8 @@ make format
 # 类型检查
 make type-check
 ```
+
+**注意**：普通用户无需克隆此仓库 - 直接 `pipx install envseal-vault` 即可
 
 ## 📝 文档
 

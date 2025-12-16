@@ -101,8 +101,8 @@ This will:
 # Push all .env files to vault (encrypted)
 envseal push
 
-# Commit to vault
-cd ~/Github/secrets-vault
+# Commit to YOUR secrets vault (the private repo you created)
+cd ~/Github/secrets-vault  # Your vault repo, NOT the envseal tool repo
 git add .
 git commit -m "Add encrypted secrets"
 git push
@@ -148,10 +148,11 @@ nano ~/Library/Application\ Support/sops/age/keys.txt
 # Paste the 3-line key file
 chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 
-# 2. Clone your vault
-git clone git@github.com:USERNAME/secrets-vault.git
+# 2. Clone YOUR secrets vault (NOT the envseal tool repo!)
+#    This is your private repo where encrypted .env files are stored
+git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
 
-# 3. Install EnvSeal
+# 3. Install EnvSeal tool
 pipx install envseal-vault
 
 # 4. Pull all environments
@@ -188,6 +189,10 @@ See [SECURITY.md](SECURITY.md) for complete security model.
 
 ## 🌍 Multi-Device Setup
 
+**Two repositories you need to know:**
+- 📦 **EnvSeal tool**: `chicogong/envseal` (this repo - install via PyPI, no need to clone)
+- 🔐 **Your secrets vault**: `USERNAME/my-secrets-vault` (your private repo for encrypted .env files)
+
 **On a new machine:**
 
 1. Copy your age key from backup:
@@ -198,9 +203,12 @@ See [SECURITY.md](SECURITY.md) for complete security model.
    chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
    ```
 
-2. Clone vault and install:
+2. Clone YOUR secrets vault and install EnvSeal tool:
    ```bash
-   git clone git@github.com:USERNAME/secrets-vault.git
+   # Clone YOUR vault (NOT the envseal tool repo)
+   git clone git@github.com:USERNAME/my-secrets-vault.git ~/Github/secrets-vault
+
+   # Install EnvSeal tool from PyPI
    pipx install envseal-vault
    envseal init
    ```
@@ -241,8 +249,10 @@ scan:
 
 ## 🛠️ Development
 
+**Only for contributing to EnvSeal tool itself:**
+
 ```bash
-# Clone repo
+# Clone the EnvSeal TOOL repository (for development)
 git clone https://github.com/chicogong/envseal.git
 cd envseal
 
@@ -259,6 +269,8 @@ make format
 # Type check
 make type-check
 ```
+
+**Note**: Regular users don't need to clone this repo - just `pipx install envseal-vault`
 
 ## 📝 Documentation
 
