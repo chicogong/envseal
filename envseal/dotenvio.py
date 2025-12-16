@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Dict
+
 from dotenv import dotenv_values
 
 
@@ -57,5 +58,5 @@ class DotEnvIO:
             return False
 
         # Need quotes if contains spaces, equals, or other special chars
-        special_chars = [' ', '=', '#', '\n', '\t']
+        special_chars = [" ", "=", "#", "\n", "\t"]
         return any(char in value for char in special_chars)

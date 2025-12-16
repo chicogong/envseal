@@ -1,14 +1,16 @@
 """Calculate diffs between .env files (key-only)."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Set
-from dotenv import dotenv_values
 from io import StringIO
+from typing import Dict, Set
+
+from dotenv import dotenv_values
 
 
 @dataclass
 class DiffResult:
     """Result of a diff calculation."""
+
     added: Set[str] = field(default_factory=set)
     removed: Set[str] = field(default_factory=set)
     modified: Set[str] = field(default_factory=set)
@@ -38,10 +40,7 @@ class DiffCalculator:
 
         # Check for modified values in common keys
         common_keys = old_keys & new_keys
-        modified = {
-            key for key in common_keys
-            if old_data[key] != new_data[key]
-        }
+        modified = {key for key in common_keys if old_data[key] != new_data[key]}
 
         return DiffResult(added=added, removed=removed, modified=modified)
 

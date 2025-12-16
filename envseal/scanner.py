@@ -1,10 +1,10 @@
 """Repository and .env file scanning."""
 
+import fnmatch
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
-import fnmatch
-import hashlib
 
 from envseal.config import ScanConfig
 
@@ -12,6 +12,7 @@ from envseal.config import ScanConfig
 @dataclass
 class EnvFile:
     """Represents a found .env file."""
+
     filepath: Path
     repo_path: Path
 
@@ -46,7 +47,9 @@ class Scanner:
 
             # Check if matches include patterns
             filename = path.name
-            if not any(fnmatch.fnmatch(filename, pattern) for pattern in self.config.include_patterns):
+            if not any(
+                fnmatch.fnmatch(filename, pattern) for pattern in self.config.include_patterns
+            ):
                 continue
 
             # Check if matches exclude patterns

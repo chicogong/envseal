@@ -3,12 +3,14 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List
+
 import yaml
 
 
 @dataclass
 class Repo:
     """Repository configuration."""
+
     name: str
     path: Path
 
@@ -20,24 +22,30 @@ class Repo:
 @dataclass
 class ScanConfig:
     """Scan configuration."""
+
     include_patterns: List[str] = field(default_factory=lambda: [".env", ".env.*"])
     exclude_patterns: List[str] = field(default_factory=lambda: [".env.example", ".env.sample"])
-    ignore_dirs: List[str] = field(default_factory=lambda: [".git", "node_modules", "venv", ".venv"])
+    ignore_dirs: List[str] = field(
+        default_factory=lambda: [".git", "node_modules", "venv", ".venv"]
+    )
 
 
 @dataclass
 class Config:
     """Main configuration for envseal."""
+
     vault_path: Path
     repos: List[Repo] = field(default_factory=list)
-    env_mapping: Dict[str, str] = field(default_factory=lambda: {
-        ".env": "local",
-        ".env.dev": "dev",
-        ".env.development": "dev",
-        ".env.staging": "staging",
-        ".env.prod": "prod",
-        ".env.production": "prod",
-    })
+    env_mapping: Dict[str, str] = field(
+        default_factory=lambda: {
+            ".env": "local",
+            ".env.dev": "dev",
+            ".env.development": "dev",
+            ".env.staging": "staging",
+            ".env.prod": "prod",
+            ".env.production": "prod",
+        }
+    )
     scan: ScanConfig = field(default_factory=ScanConfig)
 
     def __post_init__(self):
@@ -54,7 +62,9 @@ class Config:
         return cls(
             vault_path=Path(data["vault_path"]),
             repos=repos,
-            env_mapping=data.get("env_mapping", cls.__dataclass_fields__["env_mapping"].default_factory()),
+            env_mapping=data.get(
+                "env_mapping", cls.__dataclass_fields__["env_mapping"].default_factory()
+            ),
             scan=scan,
         )
 
