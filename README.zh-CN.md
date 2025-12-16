@@ -47,13 +47,21 @@ sops --version
 
 ### 安装 EnvSeal
 
+**当前开发中 - 从源码安装：**
+
 ```bash
+# 克隆仓库
+git clone https://github.com/chicogong/envseal.git
+cd envseal
+
 # 使用 pipx 全局安装（推荐）
-pipx install envseal
+pipx install .
 
 # 或使用 pip
-pip install envseal
+pip install .
 ```
+
+> **注意**：PyPI 包即将发布。发布后可以直接使用 `pipx install envseal` 安装。
 
 ### 初始化
 

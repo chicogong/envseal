@@ -47,13 +47,21 @@ sops --version
 
 ### Installation
 
+**Currently in development - install from source:**
+
 ```bash
+# Clone the repository
+git clone https://github.com/chicogong/envseal.git
+cd envseal
+
 # Install globally with pipx (recommended)
-pipx install envseal
+pipx install .
 
 # Or with pip
-pip install envseal
+pip install .
 ```
+
+> **Note**: PyPI package coming soon. Once published, you'll be able to install with `pipx install envseal`.
 
 ### Initialize
 
