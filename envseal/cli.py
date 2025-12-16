@@ -2,13 +2,24 @@
 
 import typer
 from typing import Optional
+from pathlib import Path
+from rich.console import Console
+from rich.prompt import Prompt, Confirm
+
 from envseal import __version__
+from envseal.config import Config, Repo
+from envseal.crypto import AgeKeyManager
+from envseal.scanner import Scanner
+from envseal.vault import VaultManager
+from envseal.sops import SopsManager
 
 app = typer.Typer(
     name="envseal",
     help="Manage encrypted .env files across multiple repositories",
     add_completion=False,
 )
+
+console = Console()
 
 
 def version_callback(value: bool):
@@ -31,6 +42,84 @@ def main(
 ):
     """EnvSeal - Manage encrypted .env files across repositories."""
     pass
+
+
+@app.command()
+def init(
+    root_dir: Optional[Path] = typer.Option(
+        None,
+        "--root",
+        help="Root directory to scan for repositories",
+    ),
+):
+    """Initialize envseal configuration."""
+    console.print("🔍 [bold]Initializing envseal...[/bold]")
+
+    # 1. Check/generate age key
+    console.print("\n🔐 Checking age encryption key...")
+    key_manager = AgeKeyManager()
+    key_path = key_manager.get_default_key_path()
+
+    if key_manager.key_exists(key_path):
+        console.print(f"✅ Age key found at {key_path}")
+        public_key = key_manager.get_public_key(key_path)
+    else:
+        console.print("No age key found. Generating new key...")
+        public_key = key_manager.generate_key(key_path)
+        console.print(f"✅ Age key created: {key_path}")
+        console.print(f"\n⚠️  [yellow]IMPORTANT: Back up this key! You'll need it on other devices.[/yellow]")
+        console.print(f"Public key: [cyan]{public_key}[/cyan]")
+
+    # 2. Scan for repositories
+    if root_dir is None:
+        root_dir = Path.cwd()
+
+    console.print(f"\n🔍 Scanning for Git repositories in {root_dir}...")
+    scanner = Scanner(Config().scan)
+    repos = scanner.find_git_repos(root_dir)
+
+    if not repos:
+        console.print("[red]No Git repositories found.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"Found {len(repos)} repositories:")
+    for i, repo in enumerate(repos, 1):
+        console.print(f"  [{i}] {repo.name} ({repo})")
+
+    # 3. Get vault path
+    console.print("\n📝 Where is your secrets-vault repository?")
+    vault_path_str = Prompt.ask(
+        "Path",
+        default=str(Path.home() / "Github" / "secrets-vault"),
+    )
+    vault_path = Path(vault_path_str).expanduser()
+
+    # 4. Create config
+    config = Config(
+        vault_path=vault_path,
+        repos=[Repo(name=repo.name, path=repo) for repo in repos],
+    )
+
+    config_path = Config.get_config_path()
+    config.save(config_path)
+    console.print(f"\n✅ Configuration saved to {config_path}")
+
+    # 5. Setup vault
+    vault_manager = VaultManager(config)
+    vault_manager.ensure_vault_structure()
+
+    sops_yaml_path = vault_path / ".sops.yaml"
+    if not sops_yaml_path.exists():
+        sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
+        sops.create_sops_yaml(sops_yaml_path)
+        console.print(f"✅ Created .sops.yaml in vault")
+
+    console.print("\n✅ [bold green]Initialization complete![/bold green]")
+    console.print("\n📦 Next steps:")
+    console.print("  1. Run: [cyan]envseal push[/cyan] to sync secrets to vault")
+    console.print(f"  2. cd {vault_path}")
+    console.print("  3. git add . && git commit -m 'Initial secrets import'")
+    console.print("  4. git push")
 
 
 if __name__ == "__main__":
