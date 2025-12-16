@@ -271,5 +271,87 @@ def status():
     console.print("Use [cyan]'envseal diff <repo>'[/cyan] to see details.")
 
 
+@app.command()
+def diff(
+    repo_name: str = typer.Argument(..., help="Repository name"),
+    env: str = typer.Option("prod", "--env", help="Environment to diff"),
+):
+    """Show key-only diff for a specific repo and environment."""
+    console.print(f"📝 [bold]Changes in {repo_name}/{env}.env[/bold]\n")
+
+    # Load config
+    config_path = Config.get_config_path()
+    config = Config.load(config_path)
+
+    # Find repo
+    repo = next((r for r in config.repos if r.name == repo_name), None)
+    if not repo:
+        console.print(f"[red]Repository '{repo_name}' not found in config.[/red]")
+        raise typer.Exit(1)
+
+    # Get managers
+    key_manager = AgeKeyManager()
+    key_path = key_manager.get_default_key_path()
+    public_key = key_manager.get_public_key(key_path)
+
+    scanner = Scanner(config.scan)
+    vault_manager = VaultManager(config)
+    sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
+
+    from envseal.dotenvio import DotEnvIO
+    from envseal.diffing import DiffCalculator
+
+    dotenv_io = DotEnvIO()
+    diff_calc = DiffCalculator()
+
+    # Find local file
+    env_files = scanner.scan_repo(repo.path)
+    local_file = next(
+        (ef for ef in env_files if vault_manager.map_env_filename(ef.filename) == env),
+        None
+    )
+
+    if not local_file:
+        console.print(f"[red]No .env file for '{env}' environment found locally.[/red]")
+        raise typer.Exit(1)
+
+    # Get vault file
+    vault_path = vault_manager.get_vault_path(repo_name, env)
+    if not vault_path.exists():
+        console.print(f"[yellow]File not in vault yet. All keys are new.[/yellow]")
+        raise typer.Exit(0)
+
+    # Calculate diff
+    local_normalized = dotenv_io.normalize(local_file.filepath)
+    vault_decrypted = sops.decrypt(vault_path)
+
+    diff_result = diff_calc.calculate(vault_decrypted, local_normalized)
+
+    if diff_result.is_clean():
+        console.print("[green]No changes[/green]")
+        return
+
+    # Show diff
+    if diff_result.added:
+        console.print("[green]+ ADDED:[/green]")
+        for key in sorted(diff_result.added):
+            console.print(f"  - {key}")
+        console.print()
+
+    if diff_result.modified:
+        console.print("[yellow]~ MODIFIED:[/yellow]")
+        for key in sorted(diff_result.modified):
+            console.print(f"  - {key}")
+        console.print()
+
+    if diff_result.removed:
+        console.print("[red]- REMOVED:[/red]")
+        for key in sorted(diff_result.removed):
+            console.print(f"  - {key}")
+        console.print()
+
+    console.print(f"Use [cyan]'envseal push {repo_name} --env {env}'[/cyan] to sync.")
+
+
 if __name__ == "__main__":
     app()
