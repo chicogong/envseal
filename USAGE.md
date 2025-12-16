@@ -88,7 +88,7 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 ### 3. 配置 secrets-vault
 
 ```bash
-cd /Users/haorangong/Github/secrets-vault
+cd ~/Github/secrets-vault
 
 # 编辑 .sops.yaml，替换 YOUR_AGE_PUBLIC_KEY_HERE 为实际公钥
 nano .sops.yaml
@@ -108,7 +108,7 @@ git push
 ### 4. 初始化 envseal
 
 ```bash
-cd /Users/haorangong/Github
+cd ~/Github
 
 # 运行 init（交互式）
 envseal init
@@ -118,7 +118,7 @@ envseal init
 1. 检查 age 密钥（已存在会跳过生成）
 2. 扫描当前目录下的所有 Git 仓库
 3. 让你选择要管理的仓库
-4. 询问 vault 路径（`/Users/haorangong/Github/secrets-vault`）
+4. 询问 vault 路径（`~/Github/secrets-vault`）
 5. 生成配置文件：`~/.config/envseal/config.yaml`
 6. 在 vault 创建 `.sops.yaml`（如果不存在）
 
@@ -129,24 +129,24 @@ envseal init
 🔐 Checking age encryption key...
 ✅ Age key found at ~/Library/Application Support/sops/age/keys.txt
 
-🔍 Scanning for Git repositories in /Users/haorangong/Github...
+🔍 Scanning for Git repositories in ~/Github...
 Found 5 repositories:
-  [1] envseal (/Users/haorangong/Github/chicogong/envseal)
-  [2] my-project (/Users/haorangong/Github/my-project)
-  [3] api-service (/Users/haorangong/Github/api-service)
+  [1] envseal (~/Github/chicogong/envseal)
+  [2] my-project (~/Github/my-project)
+  [3] api-service (~/Github/api-service)
   ...
 
 Select repositories to manage (comma-separated, e.g., 1,2,3): 2,3
 
 📝 Where is your secrets-vault repository?
-Path [/Users/haorangong/Github/secrets-vault]: (直接回车)
+Path [~/Github/secrets-vault]: (直接回车)
 
 ✅ Configuration saved to ~/.config/envseal/config.yaml
 ✅ Created .sops.yaml in vault
 
 📦 Next steps:
   1. Run: envseal push to sync secrets to vault
-  2. cd /Users/haorangong/Github/secrets-vault
+  2. cd ~/Github/secrets-vault
   3. git add . && git commit -m 'Initial secrets import'
   4. git push
 ```
@@ -174,7 +174,7 @@ envseal push --env prod
 
 **然后提交到 vault：**
 ```bash
-cd /Users/haorangong/Github/secrets-vault
+cd ~/Github/secrets-vault
 git status
 git diff  # 查看加密文件的变化（看不到 value，只能看到 SOPS 元数据）
 git add .
@@ -305,7 +305,7 @@ envseal pull api-service --env prod --replace
 ```
 ~/.config/envseal/config.yaml         # envseal 配置
 ~/Library/Application Support/sops/age/keys.txt  # age 密钥
-/Users/haorangong/Github/secrets-vault/  # vault 仓库
+~/Github/secrets-vault/  # vault 仓库
 ```
 
 ## 🛠️ 开发者命令
