@@ -14,7 +14,8 @@ class DotEnvIO:
         try:
             if not filepath.exists():
                 raise FileNotFoundError(f"Environment file not found: {filepath}")
-            return dict(dotenv_values(filepath))
+            # Filter out None values to match return type
+            return {k: v for k, v in dotenv_values(filepath).items() if v is not None}
         except FileNotFoundError:
             raise
         except Exception as e:
