@@ -1,6 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
-import os
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Generator
@@ -21,9 +21,9 @@ def mock_repo(temp_dir: Path) -> Path:
     repo_path.mkdir()
 
     # Initialize git
-    os.system(f"cd {repo_path} && git init")
-    os.system(f"cd {repo_path} && git config user.email 'test@example.com'")
-    os.system(f"cd {repo_path} && git config user.name 'Test User'")
+    subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
 
     # Create .env files
     (repo_path / ".env").write_text("DATABASE_URL=postgres://localhost/db\nAPI_KEY=test123\n")
@@ -39,9 +39,9 @@ def mock_vault(temp_dir: Path) -> Path:
     vault_path.mkdir()
 
     # Initialize git
-    os.system(f"cd {vault_path} && git init")
-    os.system(f"cd {vault_path} && git config user.email 'test@example.com'")
-    os.system(f"cd {vault_path} && git config user.name 'Test User'")
+    subprocess.run(["git", "init"], cwd=vault_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=vault_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=vault_path, check=True)
 
     # Create directories
     (vault_path / "secrets").mkdir()
