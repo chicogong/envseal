@@ -29,7 +29,61 @@ chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 age-keygen -y ~/Library/Application\ Support/sops/age/keys.txt
 ```
 
-**重要：**备份这个密钥文件！丢失后无法解密 secrets。
+#### 🔐 密钥安全说明（必读！）
+
+**密钥文件内容：**
+```bash
+# created: 2025-12-16T11:18:11+08:00
+# public key: age1a9x8...（公钥，可以公开）
+AGE-SECRET-KEY-...（私钥，必须保密！）
+```
+
+**公钥 vs 私钥：**
+
+| 项目 | 说明 | 可以公开？ | 用途 |
+|------|------|-----------|------|
+| **公钥** | `age1...` | ✅ 可以 | 加密文件（写入 `.sops.yaml`） |
+| **私钥** | `AGE-SECRET-KEY-...` | ❌ 绝对不行！ | 解密文件（保存在本地） |
+
+**⚠️ 安全规则：**
+
+1. **必须备份私钥文件**（整个 `keys.txt` 文件）
+   ```bash
+   # 备份方法（选一）：
+   # - 放到密码管理器（1Password、Bitwarden）
+   # - 加密后存云盘
+   # - 打印到纸上放保险柜
+   ```
+
+2. **绝对不能提交到 Git**
+   ```bash
+   # ❌ 不要这样做：
+   git add ~/Library/Application\ Support/sops/age/keys.txt
+
+   # ✅ 只能提交公钥到 .sops.yaml：
+   cd secrets-vault
+   git add .sops.yaml  # 这个文件只包含公钥，可以提交
+   ```
+
+3. **丢失私钥 = 无法解密**
+   - 已加密的 secrets 将永久无法访问
+   - 必须重新生成密钥并重新加密所有文件
+
+4. **解密是自动的**
+   ```bash
+   # envseal 会自动找到并使用私钥解密
+   envseal pull my-project --env prod
+
+   # 手动解密（了解原理）：
+   export SOPS_AGE_KEY_FILE=~/Library/Application\ Support/sops/age/keys.txt
+   sops -d secrets/my-project/prod.env
+   ```
+
+**💡 现在就备份：**
+```bash
+# 显示完整密钥文件，复制到密码管理器
+cat ~/Library/Application\ Support/sops/age/keys.txt
+```
 
 ### 3. 配置 secrets-vault
 
@@ -195,10 +249,11 @@ envseal pull my-project --env prod --stdout
 
 ### 在新机器上设置
 
-**1. 复制 age 密钥**
+**1. 复制 age 私钥文件**
 
 在原机器：
 ```bash
+# 显示完整的密钥文件（包含公钥和私钥）
 cat ~/Library/Application\ Support/sops/age/keys.txt
 ```
 
@@ -206,9 +261,14 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 ```bash
 mkdir -p ~/Library/Application\ Support/sops/age/
 nano ~/Library/Application\ Support/sops/age/keys.txt
-# 粘贴密钥内容
+# 粘贴完整内容（包括注释、公钥、私钥三行）
+# created: ...
+# public key: age1...
+# AGE-SECRET-KEY-...
 chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 ```
+
+**⚠️ 重要：**必须复制**整个文件**（3行），不是只复制公钥或私钥！
 
 **2. 克隆 vault**
 
