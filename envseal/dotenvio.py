@@ -10,7 +10,14 @@ class DotEnvIO:
 
     def parse(self, filepath: Path) -> Dict[str, str]:
         """Parse .env file to dictionary."""
-        return dict(dotenv_values(filepath))
+        try:
+            if not filepath.exists():
+                raise FileNotFoundError(f"Environment file not found: {filepath}")
+            return dict(dotenv_values(filepath))
+        except FileNotFoundError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Failed to parse {filepath}: {e}")
 
     def normalize(self, filepath: Path) -> str:
         """Parse and normalize .env file content."""
@@ -19,9 +26,12 @@ class DotEnvIO:
 
     def write(self, filepath: Path, data: Dict[str, str]) -> None:
         """Write normalized .env file."""
-        content = self._dict_to_dotenv(data)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_text(content)
+        try:
+            content = self._dict_to_dotenv(data)
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            filepath.write_text(content)
+        except OSError as e:
+            raise OSError(f"Failed to write to {filepath}: {e}")
 
     def _dict_to_dotenv(self, data: Dict[str, str]) -> str:
         """Convert dictionary to normalized dotenv format."""
@@ -29,10 +39,12 @@ class DotEnvIO:
 
         # Sort keys alphabetically
         for key in sorted(data.keys()):
-            value = data[key]
+            value = data[key] or ""  # Handle None values
 
             # Add quotes if value contains spaces or special characters
             if self._needs_quotes(value):
+                # Escape existing quotes
+                value = value.replace('"', '\\"')
                 value = f'"{value}"'
 
             lines.append(f"{key}={value}")

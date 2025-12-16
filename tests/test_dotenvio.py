@@ -76,3 +76,98 @@ def test_write_normalized(temp_dir):
     assert lines[0] == "APPLE=first"
     assert lines[1] == 'WITH_SPACE="has space"'
     assert lines[2] == "ZEBRA=last"
+
+
+def test_parse_nonexistent_file(temp_dir):
+    """Test parsing nonexistent file raises FileNotFoundError."""
+    nonexistent = temp_dir / "nonexistent.env"
+    dotenv = DotEnvIO()
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        dotenv.parse(nonexistent)
+
+    assert "Environment file not found" in str(exc_info.value)
+    assert str(nonexistent) in str(exc_info.value)
+
+
+def test_write_to_readonly_directory(temp_dir):
+    """Test writing to read-only directory raises OSError."""
+    import os
+    import stat
+
+    # Create a directory and make it read-only
+    readonly_dir = temp_dir / "readonly"
+    readonly_dir.mkdir()
+    os.chmod(readonly_dir, stat.S_IRUSR | stat.S_IXUSR)
+
+    output = readonly_dir / "test.env"
+    dotenv = DotEnvIO()
+
+    try:
+        with pytest.raises(OSError) as exc_info:
+            dotenv.write(output, {"KEY": "value"})
+
+        assert "Failed to write" in str(exc_info.value)
+    finally:
+        # Restore permissions for cleanup
+        os.chmod(readonly_dir, stat.S_IRWXU)
+
+
+def test_handle_none_values(temp_dir):
+    """Test handling None values from dotenv_values."""
+    output = temp_dir / "output.env"
+
+    # Simulate None values that can come from dotenv_values
+    data = {
+        "KEY1": "value1",
+        "KEY2": None,  # None value
+        "KEY3": "value3",
+    }
+
+    dotenv = DotEnvIO()
+    dotenv.write(output, data)
+
+    content = output.read_text()
+    lines = content.strip().split("\n")
+
+    assert "KEY1=value1" in content
+    assert "KEY2=" in content  # Should be empty string
+    assert "KEY3=value3" in content
+
+
+def test_escape_quotes_in_values(temp_dir):
+    """Test escaping existing quotes in values."""
+    output = temp_dir / "output.env"
+
+    data = {
+        "QUOTED": 'value with "quotes" inside',
+        "SIMPLE": "noquotes",
+    }
+
+    dotenv = DotEnvIO()
+    dotenv.write(output, data)
+
+    content = output.read_text()
+
+    # Should escape the quotes
+    assert 'QUOTED="value with \\"quotes\\" inside"' in content
+    assert "SIMPLE=noquotes" in content
+
+
+def test_empty_value_handling(temp_dir):
+    """Test handling empty string values."""
+    output = temp_dir / "output.env"
+
+    data = {
+        "EMPTY": "",
+        "NOT_EMPTY": "value",
+    }
+
+    dotenv = DotEnvIO()
+    dotenv.write(output, data)
+
+    content = output.read_text()
+    lines = content.strip().split("\n")
+
+    assert "EMPTY=" in content
+    assert "NOT_EMPTY=value" in content
