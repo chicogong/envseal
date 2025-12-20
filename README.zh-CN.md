@@ -48,6 +48,21 @@ EnvSeal 是一个 CLI 工具，帮助你**端到端加密**管理多个项目的
 - 🚀 **操作简单**：一条命令同步所有项目
 - 💻 **多设备**：几分钟内恢复整个开发环境
 
+## 🧭 架构示意
+
+```mermaid
+graph LR
+  Dev((开发者))
+  CLI[EnvSeal CLI]
+  Repos[[项目<br/>.env* 文件]]
+  Vault[(私有 secrets-vault<br/>Git 仓库)]
+  Dev -->|init / push / pull| CLI
+  CLI -->|扫描 & 规范化 .env*| Repos
+  CLI -->|SOPS+age 加密| Vault
+  Vault -->|pull 解密| CLI
+  CLI -->|写回 .env（临时或项目目录）| Dev
+```
+
 ## 🎯 使用场景
 
 - 🤖 **AI Coding / Vibe Coding**：用 Claude Code/Cursor？管理 10+ 项目不再混乱
@@ -155,11 +170,11 @@ envseal status
 
 my-project
   ✓ .env       - 已同步
-  ⚠ prod.env   - 3 个 key 有变化
+  ⚠ .env.prod  - 3 个 key 有变化
 
 api-service
-  + local.env  - 新文件（未加入 vault）
-  ✓ prod.env   - 已同步
+  + .env       - 新文件（未加入 vault）
+  ✓ .env.prod  - 已同步
 ```
 
 ## 📚 命令列表
@@ -171,6 +186,22 @@ api-service
 | `envseal status` | 查看所有仓库的同步状态 | - |
 | `envseal diff REPO` | 查看某个仓库的 key 变化 | `--env ENV` |
 | `envseal pull REPO` | 从 vault 解密并拉取 | `--env ENV`, `--replace`, `--stdout` |
+
+## 🔄 Push / Status 流程（仅 key）
+
+```mermaid
+sequenceDiagram
+  participant Dev as 开发者
+  participant CLI as EnvSeal CLI
+  participant SOPS
+  participant Vault as secrets-vault 仓库
+  Dev->>CLI: envseal push
+  CLI->>CLI: 扫描仓库 & 映射 env 文件
+  CLI->>SOPS: 规范化 .env* 并加密 (age)
+  SOPS-->>CLI: 加密后的文件
+  CLI->>Vault: 写入 secrets/<repo>/<env>.env
+  Dev->>Vault: git add/commit/push（手动）
+```
 
 ## 🚀 换新电脑？10 分钟恢复所有环境
 
@@ -185,7 +216,7 @@ api-service
 ## 🔐 安全说明
 
 **Age 密钥管理：**
-- **私钥**：`~/Library/Application Support/sops/age/keys.txt`（绝对不能提交到 Git！）
+- **私钥**：`~/Library/Application Support/sops/age/keys.txt`（macOS），`~/.config/sops/age/keys.txt`（Linux），`~/AppData/Local/sops/age/keys.txt`（Windows）（绝对不能提交到 Git！）
 - **公钥**：存储在 `vault/.sops.yaml`（可以提交）
 
 **备份私钥：**
@@ -195,6 +226,8 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 
 # 保存到密码管理器（1Password、Bitwarden 等）
 ```
+
+Linux/Windows 用户：请使用上方列出的对应路径。
 
 ⚠️ **警告**：丢失私钥 = 永久无法解密！
 
@@ -221,6 +254,7 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
    # 粘贴 3 行密钥文件（created、public key、private key）
    chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
    ```
+   Linux/Windows 用户：请使用上方列出的对应路径。
 
 2. 克隆你的 secrets vault 并安装 EnvSeal 工具：
    ```bash
@@ -294,6 +328,7 @@ make type-check
 ## 📝 文档
 
 - [USAGE.md](USAGE.md) - 完整使用指南（中文）
+- [USAGE.en.md](USAGE.en.md) - Complete usage guide (English)
 - [SECURITY.md](SECURITY.md) - 安全模型和最佳实践
 - [PUBLISHING.md](PUBLISHING.md) - PyPI 发布指南
 

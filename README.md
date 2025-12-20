@@ -48,6 +48,21 @@ EnvSeal is a CLI tool that helps you manage `.env` files across multiple reposit
 - 🚀 **Simple**: One command to sync everything
 - 💻 **Multi-Device**: Restore entire dev environment in minutes
 
+## 🧭 Architecture at a Glance
+
+```mermaid
+graph LR
+  Dev((Developer))
+  CLI[EnvSeal CLI]
+  Repos[[Projects<br/>.env* files]]
+  Vault[(Private secrets-vault<br/>Git repo)]
+  Dev -->|init / push / pull| CLI
+  CLI -->|scan & normalize .env*| Repos
+  CLI -->|encrypt via SOPS+age| Vault
+  Vault -->|pull decrypt| CLI
+  CLI -->|write .env to temp or project| Dev
+```
+
 ## 🎯 Use Cases
 
 - 🤖 **AI Coding / Vibe Coding**: Using Claude Code/Cursor? Manage 10+ projects without env chaos
@@ -155,11 +170,11 @@ envseal status
 
 my-project
   ✓ .env       - up to date
-  ⚠ prod.env   - 3 keys changed
+  ⚠ .env.prod  - 3 keys changed
 
 api-service
-  + local.env  - new file (not in vault)
-  ✓ prod.env   - up to date
+  + .env       - new file (not in vault)
+  ✓ .env.prod  - up to date
 ```
 
 ## 📚 Commands
@@ -171,6 +186,22 @@ api-service
 | `envseal status` | Show sync status for all repos | - |
 | `envseal diff REPO` | Show key-only changes | `--env ENV` |
 | `envseal pull REPO` | Decrypt and pull from vault | `--env ENV`, `--replace`, `--stdout` |
+
+## 🔄 Push / Status Flow (Key-Only)
+
+```mermaid
+sequenceDiagram
+  participant Dev
+  participant CLI as EnvSeal CLI
+  participant SOPS
+  participant Vault as secrets-vault repo
+  Dev->>CLI: envseal push
+  CLI->>CLI: scan repos & map env files
+  CLI->>SOPS: normalize .env* and encrypt (age)
+  SOPS-->>CLI: encrypted files
+  CLI->>Vault: write secrets/<repo>/<env>.env
+  Dev->>Vault: git add/commit/push (manual)
+```
 
 ## 🚀 New Machine? Restore Everything in 10 Minutes
 
@@ -185,7 +216,7 @@ See detailed steps in the "Multi-Device Setup" section below 👇
 ## 🔐 Security
 
 **Age Key Management:**
-- **Private key**: `~/Library/Application Support/sops/age/keys.txt` (NEVER commit!)
+- **Private key**: `~/Library/Application Support/sops/age/keys.txt` (macOS), `~/.config/sops/age/keys.txt` (Linux), `~/AppData/Local/sops/age/keys.txt` (Windows) (NEVER commit!)
 - **Public key**: Stored in `vault/.sops.yaml` (safe to commit)
 
 **Backup Your Private Key:**
@@ -195,6 +226,8 @@ cat ~/Library/Application\ Support/sops/age/keys.txt
 
 # Save to password manager (1Password, Bitwarden, etc.)
 ```
+
+Linux/Windows users: use the OS-specific key path listed in Age Key Management.
 
 ⚠️ **Critical**: Losing your private key = permanent data loss!
 
@@ -221,6 +254,7 @@ See [SECURITY.md](SECURITY.md) for complete security model.
    # Paste the 3-line key file (created, public key, private key)
    chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
    ```
+   Linux/Windows users: use the OS-specific key path listed in Security.
 
 2. Clone YOUR secrets vault and install EnvSeal tool:
    ```bash
@@ -293,7 +327,8 @@ make type-check
 
 ## 📝 Documentation
 
-- [USAGE.md](USAGE.md) - Complete usage guide (Chinese)
+- [USAGE.en.md](USAGE.en.md) - Complete usage guide (English)
+- [USAGE.md](USAGE.md) - 完整使用指南（中文）
 - [SECURITY.md](SECURITY.md) - Security model and best practices
 - [PUBLISHING.md](PUBLISHING.md) - Guide for publishing to PyPI
 

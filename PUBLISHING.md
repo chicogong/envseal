@@ -26,8 +26,8 @@ pipx run build
 ```
 
 This creates:
-- `dist/envseal-X.Y.Z-py3-none-any.whl` (wheel)
-- `dist/envseal-X.Y.Z.tar.gz` (source distribution)
+- `dist/envseal_vault-X.Y.Z-py3-none-any.whl` (wheel)
+- `dist/envseal_vault-X.Y.Z.tar.gz` (source distribution)
 
 ### 3. Validate Packages
 
@@ -37,8 +37,8 @@ pipx run twine check dist/*
 
 Should show:
 ```
-Checking dist/envseal-0.1.0-py3-none-any.whl: PASSED
-Checking dist/envseal-0.1.0.tar.gz: PASSED
+Checking dist/envseal_vault-0.1.0-py3-none-any.whl: PASSED
+Checking dist/envseal_vault-0.1.0.tar.gz: PASSED
 ```
 
 ## Publishing
@@ -54,7 +54,7 @@ Checking dist/envseal-0.1.0.tar.gz: PASSED
 
 3. **Test Installation**:
    ```bash
-   pip install --index-url https://test.pypi.org/simple/ envseal
+   pip install --index-url https://test.pypi.org/simple/ envseal-vault
    ```
 
 ### Publish to PyPI
@@ -69,13 +69,13 @@ Checking dist/envseal-0.1.0.tar.gz: PASSED
    - Password: Your PyPI API token (starts with `pypi-`)
 
 3. **Verify**:
-   Visit https://pypi.org/project/envseal/
+   Visit https://pypi.org/project/envseal-vault/
 
 ### After Publishing
 
 1. **Test Installation**:
    ```bash
-   pipx install envseal
+   pipx install envseal-vault
    envseal --version
    ```
 

@@ -23,7 +23,7 @@ EnvSeal is designed to securely manage environment variables across multiple pro
 
 ### 1. Age Key Security
 
-- **Backup your age key**: `~/Library/Application Support/sops/age/keys.txt` (macOS)
+- **Backup your age key**: `~/Library/Application Support/sops/age/keys.txt` (macOS), `~/.config/sops/age/keys.txt` (Linux), `~/AppData/Local/sops/age/keys.txt` (Windows)
 - Store backup in a secure location (password manager, encrypted USB, etc.)
 - Never commit age keys to Git
 - Use different age keys for different trust boundaries if sharing vault
@@ -38,7 +38,7 @@ EnvSeal is designed to securely manage environment variables across multiple pro
 ### 3. Multi-Device Setup
 
 When syncing to a new device:
-1. Copy age key to new device: `~/Library/Application Support/sops/age/keys.txt`
+1. Copy age key to new device: `~/Library/Application Support/sops/age/keys.txt` (macOS), `~/.config/sops/age/keys.txt` (Linux), `~/AppData/Local/sops/age/keys.txt` (Windows)
 2. Set permissions: `chmod 600 <key-file>`
 3. Clone vault repository
 4. Run `envseal pull` to restore secrets

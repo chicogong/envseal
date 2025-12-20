@@ -1,5 +1,7 @@
 # EnvSeal 使用指南
 
+English version: [USAGE.en.md](USAGE.en.md)
+
 ## 📦 完整设置流程
 
 ### 1. 安装外部依赖
@@ -13,7 +15,22 @@ age-keygen --version
 sops --version
 ```
 
-### 2. 生成 Age 密钥
+### 2. 安装 EnvSeal
+
+```bash
+# 使用 pipx 全局安装（推荐）
+pipx install envseal-vault
+
+# 或使用 pip
+pip install envseal-vault
+
+# 验证安装
+envseal --version
+```
+
+### 3. 生成 Age 密钥（可选）
+
+如果你打算直接运行 `envseal init`，这一步会自动完成。下面内容用于手动生成或已有密钥的情况。
 
 ```bash
 # 创建密钥目录
@@ -28,6 +45,8 @@ chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 # 查看公钥
 age-keygen -y ~/Library/Application\ Support/sops/age/keys.txt
 ```
+
+Linux/Windows 用户：路径分别为 `~/.config/sops/age/keys.txt`（Linux）和 `~/AppData/Local/sops/age/keys.txt`（Windows）。
 
 #### 🔐 密钥安全说明（必读！）
 
@@ -85,7 +104,9 @@ AGE-SECRET-KEY-...（私钥，必须保密！）
 cat ~/Library/Application\ Support/sops/age/keys.txt
 ```
 
-### 3. 配置 secrets-vault
+### 4. 配置 secrets-vault（可选）
+
+如果 `.sops.yaml` 不存在，`envseal init` 会自动创建。需要自定义规则或多公钥时再手动配置。
 
 ```bash
 cd ~/Github/secrets-vault
@@ -105,7 +126,7 @@ git commit -m "config: add age public key to .sops.yaml"
 git push
 ```
 
-### 4. 初始化 envseal
+### 5. 初始化 envseal
 
 ```bash
 cd ~/Github
@@ -117,10 +138,9 @@ envseal init
 **init 会做什么：**
 1. 检查 age 密钥（已存在会跳过生成）
 2. 扫描当前目录下的所有 Git 仓库
-3. 让你选择要管理的仓库
-4. 询问 vault 路径（`~/Github/secrets-vault`）
-5. 生成配置文件：`~/.config/envseal/config.yaml`
-6. 在 vault 创建 `.sops.yaml`（如果不存在）
+3. 询问 vault 路径（`~/Github/secrets-vault`）
+4. 生成配置文件：`~/.config/envseal/config.yaml`（包含扫描到的仓库）
+5. 在 vault 创建 `.sops.yaml`（如果不存在）
 
 **示例交互：**
 ```
@@ -135,8 +155,6 @@ Found 5 repositories:
   [2] my-project (~/Github/my-project)
   [3] api-service (~/Github/api-service)
   ...
-
-Select repositories to manage (comma-separated, e.g., 1,2,3): 2,3
 
 📝 Where is your secrets-vault repository?
 Path [~/Github/secrets-vault]: (直接回车)
@@ -194,12 +212,12 @@ envseal status
 📊 Secrets Status:
 
 my-project
-  ✓ dev.env       - up to date
-  ⚠ prod.env      - 3 keys changed
+  ✓ .env.dev      - up to date
+  ⚠ .env.prod     - 3 keys changed
 
 api-service
-  + local.env     - new file (not in vault)
-  ✓ prod.env      - up to date
+  + .env          - new file (not in vault)
+  ✓ .env.prod     - up to date
 
 Use 'envseal diff <repo>' to see details.
 ```
@@ -268,24 +286,24 @@ nano ~/Library/Application\ Support/sops/age/keys.txt
 chmod 600 ~/Library/Application\ Support/sops/age/keys.txt
 ```
 
+Linux/Windows 用户：路径分别为 `~/.config/sops/age/keys.txt`（Linux）和 `~/AppData/Local/sops/age/keys.txt`（Windows）。
+
 **⚠️ 重要：**必须复制**整个文件**（3行），不是只复制公钥或私钥！
 
 **2. 克隆 vault**
 
 ```bash
 cd ~/Github
-git clone git@github.com:chicogong/secrets-vault.git
+git clone git@github.com:USERNAME/secrets-vault.git
 ```
 
 **3. 安装 envseal**
 
 ```bash
-# 如果你的 envseal 还没有发布到 PyPI
-cd ~/Github/chicogong/envseal
-pip install -e .
+pipx install envseal-vault
 
-# 或者（推荐）
-pipx install -e ~/Github/chicogong/envseal
+# 或使用 pip
+pip install envseal-vault
 ```
 
 **4. 初始化并拉取**
@@ -293,7 +311,7 @@ pipx install -e ~/Github/chicogong/envseal
 ```bash
 cd ~/Github
 envseal init
-# 选择仓库，指向 vault
+# 按提示输入 vault 路径
 
 # 拉取 secrets
 envseal pull my-project --env prod --replace
@@ -304,28 +322,26 @@ envseal pull api-service --env prod --replace
 
 ```
 ~/.config/envseal/config.yaml         # envseal 配置
-~/Library/Application Support/sops/age/keys.txt  # age 密钥
+~/Library/Application Support/sops/age/keys.txt  # age 密钥 (macOS)
+~/.config/sops/age/keys.txt  # age 密钥 (Linux)
+~/AppData/Local/sops/age/keys.txt  # age 密钥 (Windows)
 ~/Github/secrets-vault/  # vault 仓库
 ```
 
-## 🛠️ 开发者命令
+## 🛠️ 配置维护
 
 ```bash
 # 查看配置
 cat ~/.config/envseal/config.yaml
 
-# 手动编辑配置
+# 手动编辑配置（添加/移除 repos、调整 env_mapping）
 nano ~/.config/envseal/config.yaml
 
-# 添加新仓库
-envseal add /path/to/new-repo
-
-# 移除仓库
-envseal remove repo-name
-
-# 列出所有管理的仓库
-envseal list
+# 变更后检查状态
+envseal status
 ```
+
+目前没有 `add/remove/list` 命令，调整仓库列表请直接编辑配置文件，或重新运行 `envseal init` 生成新配置（会覆盖原文件）。
 
 ## ⚠️ 常见问题
 
@@ -341,8 +357,8 @@ A: 检查：
 ### Q: 如何知道哪个 .env 文件映射到哪个环境？
 A: 默认映射（可在配置中修改）：
 - `.env` → `local`
-- `.env.dev` → `dev`
-- `.env.production` → `prod`
+- `.env.dev` / `.env.development` → `dev`
+- `.env.prod` / `.env.production` → `prod`
 - `.env.staging` → `staging`
 
 ### Q: 可以在不同项目使用不同的环境名吗？
@@ -352,7 +368,7 @@ A: 可以！编辑 `~/.config/envseal/config.yaml` 中的 `env_mapping`
 A: **绝对不行！**即使文件已加密，仍应保持私有。
 
 ### Q: 如何与团队共享 secrets？
-A: 见 [secrets-vault/README.md](../secrets-vault/README.md) 的"Team Sharing"部分。
+A: 见 [SECURITY.md](./SECURITY.md) 的 Team Sharing (Advanced) 部分。
 
 ## 📝 最佳实践
 
@@ -394,4 +410,3 @@ envseal pull my-project --env prod --replace
 
 - [README.md](./README.md) - 项目概述
 - [SECURITY.md](./SECURITY.md) - 安全策略
-- [secrets-vault README](../secrets-vault/README.md) - Vault 使用说明

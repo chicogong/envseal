@@ -1,5 +1,7 @@
 # EnvSeal Design Document
 
+> NOTE: This is a historical design document. It may not reflect the current CLI behavior, package name, or implemented commands.
+
 **Date:** 2025-12-15
 **Status:** Approved
 **Target User:** Individual developers managing multiple projects

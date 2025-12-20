@@ -1,6 +1,6 @@
 # EnvSeal MVP Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> NOTE: This is a historical implementation plan. It may not reflect the current repository structure, package name, or implemented commands.
 
 **Goal:** Build the MVP of envseal - a CLI tool that scans .env files across repos, encrypts them with SOPS, and stores them in a Git-backed vault with key-only diff support.
 
