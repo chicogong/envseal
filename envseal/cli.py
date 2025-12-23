@@ -8,8 +8,12 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from envseal import __version__
+from envseal.changes import ChangeCollector, ChangeInfo
 from envseal.config import Config, Repo
 from envseal.crypto import AgeKeyManager
+from envseal.diffing import DiffCalculator
+from envseal.dotenvio import DotEnvIO
+from envseal.interactive import InteractiveSelector, SelectionItem
 from envseal.scanner import Scanner
 from envseal.sops import SopsManager
 from envseal.vault import VaultManager
@@ -433,6 +437,150 @@ def pull(
 
         console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
         console.print("\n⚠️  Temporary file will be deleted when process ends.")
+
+
+@app.command()
+def update(
+    env: Optional[str] = typer.Option(
+        None,
+        "--env",
+        help="Only show changes for specific environment",
+    ),
+) -> None:
+    """Interactively update changed secrets to vault."""
+    console.print("🔄 Scanning repositories for changes...")
+
+    # Load config
+    config_path = Config.get_config_path()
+    if not config_path.exists():
+        console.print("[red]Config not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
+
+    config = Config.load(config_path)
+
+    # Initialize managers
+    key_manager = AgeKeyManager()
+    key_path = key_manager.get_default_key_path()
+
+    if not key_manager.key_exists(key_path):
+        console.print("[red]Age key not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
+
+    public_key = key_manager.get_public_key(key_path)
+
+    scanner = Scanner(config.scan)
+    vault_manager = VaultManager(config)
+    sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
+    dotenv_io = DotEnvIO()
+    diff_calc = DiffCalculator()
+
+    # Collect changes
+    change_collector = ChangeCollector(
+        config=config,
+        scanner=scanner,
+        vault_manager=vault_manager,
+        sops=sops,
+        dotenv_io=dotenv_io,
+        diff_calc=diff_calc,
+    )
+
+    changes = change_collector.collect_changes(env_filter=env)
+
+    # Check if any changes found
+    if not changes:
+        console.print("\n✅ All secrets are up to date!")
+        return
+
+    # Show summary
+    console.print(f"\n[bold]Found {len(changes)} {'repository' if len(changes) == 1 else 'repositories'} with changes:[/bold]\n")
+
+    # Build selection items
+    items = []
+    for change in changes:
+        item = SelectionItem(
+            id=f"{change.repo_name}/{change.env_name}",
+            display=f"{change.repo_name} - {change.env_name}.env",
+            description=change.change_summary,
+            data=change,
+            selected=True,  # Default to all selected
+        )
+        items.append(item)
+
+    # Show interactive selector
+    selector = InteractiveSelector(items, console)
+    selected = selector.show()
+
+    # Check if any items selected
+    if not selected:
+        console.print("\n[yellow]No items selected. Exiting.[/yellow]")
+        return
+
+    # Push selected files
+    console.print(f"\n🚀 Updating {len(selected)} {'file' if len(selected) == 1 else 'files'}...\n")
+
+    updated_count = 0
+    skipped_count = 0
+
+    for item in selected:
+        change: ChangeInfo = item.data
+        console.print(f"📁 Checking [cyan]{change.repo_name}/{change.env_name}[/cyan]...")
+
+        try:
+            # Re-verify that values are actually different before encrypting
+            # This prevents unnecessary re-encryption when only formatting differs
+            local_normalized = dotenv_io.normalize(change.env_file.filepath)
+            vault_decrypted = sops.decrypt(change.vault_path)
+
+            # Re-calculate diff to ensure values are still different
+            current_diff = diff_calc.calculate(vault_decrypted, local_normalized)
+
+            # Skip if no actual changes (values might have been changed back)
+            if not (current_diff.added or current_diff.modified or current_diff.removed):
+                console.print(f"  ⊘ [dim]{change.env_name}.env - no changes detected, skipped[/dim]")
+                skipped_count += 1
+                continue
+
+            # Ensure vault directory exists
+            change.vault_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Use temp file for encryption (same pattern as push command)
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+
+                # Parse and write normalized
+                data = dotenv_io.parse(change.env_file.filepath)
+                dotenv_io.write(tmp_path, data)
+
+                # Encrypt
+                sops.encrypt(tmp_path, change.vault_path)
+                tmp_path.unlink()
+
+            console.print(f"  ✓ [green]{change.env_name}.env updated[/green]")
+            updated_count += 1
+
+        except Exception as e:
+            console.print(f"  ✗ [red]Failed: {e}[/red]")
+
+    # Show summary and next steps
+    if updated_count > 0:
+        summary_parts = [f"Updated {updated_count} {'secret' if updated_count == 1 else 'secrets'} to vault"]
+        if skipped_count > 0:
+            summary_parts.append(f"skipped {skipped_count} (no changes)")
+        console.print(f"\n✅ {', '.join(summary_parts)}")
+
+        # Show git commands for vault
+        console.print("\n📦 Next steps:")
+        console.print(f"  1. cd {config.vault_path}")
+        console.print("  2. git add .")
+        console.print("  3. git commit -m 'Update secrets'")
+        console.print("  4. git push")
+    else:
+        if skipped_count > 0:
+            console.print(f"\n✅ All {skipped_count} selected {'file' if skipped_count == 1 else 'files'} already up to date (no re-encryption needed)")
+        else:
+            console.print("\n[yellow]No files were updated.[/yellow]")
 
 
 if __name__ == "__main__":

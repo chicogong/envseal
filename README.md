@@ -177,6 +177,23 @@ api-service
   ✓ .env.prod  - up to date
 ```
 
+### Update Changed Secrets (Interactive)
+
+```bash
+# Interactively select and update changed secrets
+envseal update
+
+# Only show changes for specific environment
+envseal update --env prod
+```
+
+The `update` command will:
+1. Scan all repositories for changed .env files
+2. Show an interactive selection menu
+3. Let you choose which repos to update
+4. Push selected changes to the vault
+5. Show next steps for git commit/push
+
 ## 📚 Commands
 
 | Command | Description | Options |
@@ -184,6 +201,7 @@ api-service
 | `envseal init` | Initialize configuration and generate keys | `--root DIR` |
 | `envseal push [repos...]` | Encrypt and push secrets to vault | `--env ENV` |
 | `envseal status` | Show sync status for all repos | - |
+| `envseal update` | Interactively update changed secrets to vault | `--env ENV` |
 | `envseal diff REPO` | Show key-only changes | `--env ENV` |
 | `envseal pull REPO` | Decrypt and pull from vault | `--env ENV`, `--replace`, `--stdout` |
 
