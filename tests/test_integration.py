@@ -50,6 +50,7 @@ def test_full_workflow(temp_dir):
 
     # Create .sops.yaml
     from envseal.sops import SopsManager
+
     sops = SopsManager(age_public_key=public_key, age_key_file=key_file)
     sops.create_sops_yaml(vault_path / ".sops.yaml")
 
@@ -96,7 +97,8 @@ def test_encryption_decryption_workflow(temp_dir):
 
     # Write to temp file for encryption
     import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as tmp:
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as tmp:
         tmp.write(normalized)
         tmp_path = Path(tmp.name)
 
@@ -154,6 +156,7 @@ def test_scanner_and_vault_integration(temp_dir):
     config = Config(vault_path=vault_path)
 
     from envseal.vault import VaultManager
+
     vault_manager = VaultManager(config)
 
     # Test mapping
@@ -162,7 +165,10 @@ def test_scanner_and_vault_integration(temp_dir):
     assert vault_manager.map_env_filename(".env.prod") == "prod"
 
     # Test vault paths
-    assert vault_manager.get_vault_path("test-repo", "prod") == vault_path / "secrets" / "test-repo" / "prod.env"
+    assert (
+        vault_manager.get_vault_path("test-repo", "prod")
+        == vault_path / "secrets" / "test-repo" / "prod.env"
+    )
 
 
 @pytest.mark.integration
@@ -178,7 +184,9 @@ def test_diff_workflow(temp_dir):
 
     # Create local file with changes
     local_file = temp_dir / ".env.prod"
-    local_content = "KEY1=modified\nKEY2=value2\nKEY4=newkey\n"  # KEY1 modified, KEY3 removed, KEY4 added
+    local_content = (
+        "KEY1=modified\nKEY2=value2\nKEY4=newkey\n"  # KEY1 modified, KEY3 removed, KEY4 added
+    )
     local_file.write_text(local_content)
 
     # Calculate diff
@@ -202,3 +210,61 @@ def test_diff_workflow(temp_dir):
     assert len(diff.added) == 1
     assert len(diff.removed) == 1
     assert len(diff.modified) == 1
+
+
+@pytest.mark.integration
+@requires_age
+@requires_sops
+def test_push_skips_unchanged_and_commits(temp_dir, monkeypatch):
+    """push encrypts + commits with --commit, then skips unchanged files on re-run."""
+    import subprocess
+
+    from envseal.cli import app
+    from envseal.sops import SopsManager
+
+    # age key at a temp location
+    key_file = temp_dir / "age-key.txt"
+    public_key = AgeKeyManager().generate_key(key_file)
+    monkeypatch.setattr(AgeKeyManager, "get_default_key_path", lambda self: key_file)
+
+    # project repo with a .env file
+    repo_path = temp_dir / "proj"
+    repo_path.mkdir()
+    (repo_path / ".env").write_text("API_KEY=secret\nDB=postgres://localhost/x\n")
+
+    # git-backed vault with a .sops.yaml
+    vault_path = temp_dir / "vault"
+    (vault_path / "secrets").mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=vault_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=vault_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=vault_path, check=True)
+    SopsManager(age_public_key=public_key, age_key_file=key_file).create_sops_yaml(
+        vault_path / ".sops.yaml"
+    )
+
+    # config at a temp location
+    config_path = temp_dir / "config.yaml"
+    Config(vault_path=vault_path, repos=[Repo(name="proj", path=repo_path)]).save(config_path)
+    monkeypatch.setattr(Config, "get_config_path", staticmethod(lambda: config_path))
+
+    vault_file = vault_path / "secrets" / "proj" / "local.env"
+
+    # first push with --commit: file gets encrypted and committed
+    result = runner.invoke(app, ["push", "--commit"])
+    assert result.exit_code == 0, result.output
+    assert vault_file.exists()
+    encrypted_first = vault_file.read_text()
+    assert "sops" in encrypted_first
+
+    log = subprocess.run(
+        ["git", "-C", str(vault_path), "log", "--oneline"],
+        capture_output=True,
+        text=True,
+    )
+    assert log.stdout.strip(), "expected a commit in the vault"
+
+    # second push with no changes: file must NOT be re-encrypted
+    result2 = runner.invoke(app, ["push"])
+    assert result2.exit_code == 0, result2.output
+    assert "no changes" in result2.output.lower()
+    assert vault_file.read_text() == encrypted_first

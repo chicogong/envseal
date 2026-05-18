@@ -34,6 +34,49 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _sync_vault(
+    vault_manager: VaultManager,
+    config: Config,
+    commit: bool,
+    do_push: bool,
+    message: str,
+) -> None:
+    """Commit (and optionally push) the vault repo, or print manual git steps.
+
+    When neither --commit nor --push is passed the previous behaviour is kept:
+    the manual git steps are printed for the user to run themselves.
+    """
+    if not commit and not do_push:
+        console.print("\n📦 Next steps:")
+        console.print(f"  1. cd {config.vault_path}")
+        console.print("  2. git add .")
+        console.print("  3. git commit -m 'Update secrets'")
+        console.print("  4. git push")
+        return
+
+    if not vault_manager.is_git_repo():
+        console.print(
+            f"\n[yellow]⚠ Vault at {config.vault_path} is not a Git repository "
+            "— skipping commit.[/yellow]"
+        )
+        return
+
+    try:
+        if vault_manager.git_commit(message):
+            console.print("\n✅ Committed changes in vault")
+        else:
+            console.print("\n[dim]Vault: nothing to commit.[/dim]")
+        if do_push:
+            vault_manager.git_push()
+            console.print("✅ Pushed vault to remote")
+    except RuntimeError as e:
+        console.print(f"\n[red]Git operation failed: {e}[/red]")
+        console.print(
+            f"[yellow]Run manually: cd {config.vault_path} "
+            "&& git add . && git commit && git push[/yellow]"
+        )
+
+
 @app.callback()
 def main(
     version: Optional[bool] = typer.Option(
@@ -142,6 +185,16 @@ def push(
         "--env",
         help="Only push specific environment (e.g., prod)",
     ),
+    commit: bool = typer.Option(
+        False,
+        "--commit",
+        help="Commit the encrypted changes in the vault repo",
+    ),
+    do_push: bool = typer.Option(
+        False,
+        "--push",
+        help="Commit and push the vault repo to its remote",
+    ),
 ) -> None:
     """Push .env files to vault and encrypt with SOPS."""
     console.print("🔄 [bold]Pushing secrets to vault...[/bold]")
@@ -167,15 +220,16 @@ def push(
     scanner = Scanner(config.scan)
     vault_manager = VaultManager(config)
     sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
-
-    from envseal.dotenvio import DotEnvIO
-
     dotenv_io = DotEnvIO()
+    diff_calc = DiffCalculator()
 
     # Process each repo
     repos_to_process = config.repos
     if repos:
         repos_to_process = [r for r in config.repos if r.name in repos]
+
+    pushed_count = 0
+    skipped_count = 0
 
     for repo in repos_to_process:
         console.print(f"\n📁 Processing [cyan]{repo.name}[/cyan]...")
@@ -196,6 +250,19 @@ def push(
 
             # Get vault path
             vault_path = vault_manager.get_vault_path(repo.name, env_name)
+
+            # Skip unchanged files: SOPS encryption is non-deterministic, so
+            # re-encrypting an unchanged file still produces a noisy git diff.
+            if vault_path.exists():
+                local_normalized = dotenv_io.normalize(env_file.filepath)
+                vault_decrypted = sops.decrypt(vault_path)
+                if diff_calc.calculate(vault_decrypted, local_normalized).is_clean():
+                    console.print(
+                        f"  ⊘ [dim]{env_file.filename} → {env_name}.env (no changes)[/dim]"
+                    )
+                    skipped_count += 1
+                    continue
+
             vault_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Normalize and encrypt
@@ -213,13 +280,19 @@ def push(
                 tmp_path.unlink()
 
             console.print(f"  ✓ {env_file.filename} → {env_name}.env")
+            pushed_count += 1
 
-    console.print("\n✅ [bold green]Push complete![/bold green]")
-    console.print("\n📦 Next steps:")
-    console.print(f"  1. cd {config.vault_path}")
-    console.print("  2. git add .")
-    console.print("  3. git commit -m 'Update secrets'")
-    console.print("  4. git push")
+    # Summary
+    if pushed_count:
+        summary = f"Pushed {pushed_count} file(s) to vault"
+        if skipped_count:
+            summary += f", {skipped_count} unchanged"
+        console.print(f"\n✅ [bold green]{summary}[/bold green]")
+        _sync_vault(vault_manager, config, commit, do_push, "envseal: update secrets")
+    elif skipped_count:
+        console.print(f"\n✅ All {skipped_count} file(s) already up to date — nothing to encrypt.")
+    else:
+        console.print("\n[yellow]Nothing to push.[/yellow]")
 
 
 @app.command()
@@ -238,6 +311,9 @@ def status() -> None:
     # Get age key
     key_manager = AgeKeyManager()
     key_path = key_manager.get_default_key_path()
+    if not key_manager.key_exists(key_path):
+        console.print("[red]Age key not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
     public_key = key_manager.get_public_key(key_path)
 
     # Initialize managers
@@ -294,6 +370,9 @@ def diff(
 
     # Load config
     config_path = Config.get_config_path()
+    if not config_path.exists():
+        console.print("[red]Config not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
     config = Config.load(config_path)
 
     # Find repo
@@ -305,6 +384,9 @@ def diff(
     # Get managers
     key_manager = AgeKeyManager()
     key_path = key_manager.get_default_key_path()
+    if not key_manager.key_exists(key_path):
+        console.print("[red]Age key not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
     public_key = key_manager.get_public_key(key_path)
 
     scanner = Scanner(config.scan)
@@ -375,6 +457,9 @@ def pull(
     """Pull and decrypt secrets from vault."""
     # Load config
     config_path = Config.get_config_path()
+    if not config_path.exists():
+        console.print("[red]Config not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
     config = Config.load(config_path)
 
     # Find repo
@@ -386,6 +471,9 @@ def pull(
     # Get managers
     key_manager = AgeKeyManager()
     key_path = key_manager.get_default_key_path()
+    if not key_manager.key_exists(key_path):
+        console.print("[red]Age key not found. Run 'envseal init' first.[/red]")
+        raise typer.Exit(1)
     public_key = key_manager.get_public_key(key_path)
 
     vault_manager = VaultManager(config)
@@ -428,15 +516,20 @@ def pull(
         local_path.write_text(decrypted)
         console.print(f"✅ Pulled to {local_path}")
     else:
-        # Write to temp directory
+        # Write to a private temp directory (mkdtemp creates it with 0700 perms)
+        import os
         import tempfile
 
         temp_dir = Path(tempfile.mkdtemp(prefix="envseal-"))
         temp_file = temp_dir / f"{env}.env"
         temp_file.write_text(decrypted)
+        os.chmod(temp_file, 0o600)
 
         console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
-        console.print("\n⚠️  Temporary file will be deleted when process ends.")
+        console.print(
+            "\n⚠️  [yellow]This is a plaintext secrets file and is NOT auto-deleted.[/yellow]"
+        )
+        console.print(f"   Remove it when done: [cyan]rm -rf {temp_dir}[/cyan]")
 
 
 @app.command()
@@ -445,6 +538,16 @@ def update(
         None,
         "--env",
         help="Only show changes for specific environment",
+    ),
+    commit: bool = typer.Option(
+        False,
+        "--commit",
+        help="Commit the encrypted changes in the vault repo",
+    ),
+    do_push: bool = typer.Option(
+        False,
+        "--push",
+        help="Commit and push the vault repo to its remote",
     ),
 ) -> None:
     """Interactively update changed secrets to vault."""
@@ -492,7 +595,9 @@ def update(
         return
 
     # Show summary
-    console.print(f"\n[bold]Found {len(changes)} {'repository' if len(changes) == 1 else 'repositories'} with changes:[/bold]\n")
+    console.print(
+        f"\n[bold]Found {len(changes)} {'repository' if len(changes) == 1 else 'repositories'} with changes:[/bold]\n"
+    )
 
     # Build selection items
     items = []
@@ -536,7 +641,9 @@ def update(
 
             # Skip if no actual changes (values might have been changed back)
             if not (current_diff.added or current_diff.modified or current_diff.removed):
-                console.print(f"  ⊘ [dim]{change.env_name}.env - no changes detected, skipped[/dim]")
+                console.print(
+                    f"  ⊘ [dim]{change.env_name}.env - no changes detected, skipped[/dim]"
+                )
                 skipped_count += 1
                 continue
 
@@ -565,20 +672,19 @@ def update(
 
     # Show summary and next steps
     if updated_count > 0:
-        summary_parts = [f"Updated {updated_count} {'secret' if updated_count == 1 else 'secrets'} to vault"]
+        summary_parts = [
+            f"Updated {updated_count} {'secret' if updated_count == 1 else 'secrets'} to vault"
+        ]
         if skipped_count > 0:
             summary_parts.append(f"skipped {skipped_count} (no changes)")
         console.print(f"\n✅ {', '.join(summary_parts)}")
 
-        # Show git commands for vault
-        console.print("\n📦 Next steps:")
-        console.print(f"  1. cd {config.vault_path}")
-        console.print("  2. git add .")
-        console.print("  3. git commit -m 'Update secrets'")
-        console.print("  4. git push")
+        _sync_vault(vault_manager, config, commit, do_push, "envseal: update secrets")
     else:
         if skipped_count > 0:
-            console.print(f"\n✅ All {skipped_count} selected {'file' if skipped_count == 1 else 'files'} already up to date (no re-encryption needed)")
+            console.print(
+                f"\n✅ All {skipped_count} selected {'file' if skipped_count == 1 else 'files'} already up to date (no re-encryption needed)"
+            )
         else:
             console.print("\n[yellow]No files were updated.[/yellow]")
 
