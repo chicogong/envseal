@@ -46,6 +46,13 @@ class Scanner:
 
             # Check if matches include patterns
             filename = path.name
+
+            # Never treat backup files as env files: `envseal pull --replace`
+            # writes a <name>.backup copy, and without this guard a later scan
+            # would re-ingest that backup into the vault as a bogus environment.
+            if filename.endswith(".backup"):
+                continue
+
             if not any(
                 fnmatch.fnmatch(filename, pattern) for pattern in self.config.include_patterns
             ):

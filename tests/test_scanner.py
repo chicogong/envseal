@@ -91,7 +91,7 @@ def test_env_file_hash(temp_dir):
 
     # Hash should be SHA256 (64 hex chars)
     assert len(hash1) == 64
-    assert all(c in '0123456789abcdef' for c in hash1)
+    assert all(c in "0123456789abcdef" for c in hash1)
 
 
 def test_scanner_empty_repo(temp_dir):
@@ -103,3 +103,22 @@ def test_scanner_empty_repo(temp_dir):
     files = scanner.scan_repo(repo)
 
     assert len(files) == 0
+
+
+def test_scanner_skips_backup_files(temp_dir):
+    """Backup files left by `pull --replace` must not be scanned as env files."""
+    repo = temp_dir / "repo"
+    repo.mkdir()
+
+    (repo / ".env").write_text("KEY=value")
+    (repo / ".env.prod").write_text("KEY=prod")
+    # files that `envseal pull --replace` writes:
+    (repo / ".env.backup").write_text("KEY=old")
+    (repo / ".env.prod.backup").write_text("KEY=old")
+
+    scanner = Scanner(ScanConfig())
+    found = {ef.filepath.name for ef in scanner.scan_repo(repo)}
+
+    assert found == {".env", ".env.prod"}
+    assert ".env.backup" not in found
+    assert ".env.prod.backup" not in found
