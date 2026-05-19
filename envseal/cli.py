@@ -248,8 +248,10 @@ def push(
             if env and env_name != env:
                 continue
 
-            # Get vault path
-            vault_path = vault_manager.get_vault_path(repo.name, env_name)
+            # Vault path mirrors the file's location within the repo
+            subdir = str(env_file.subdir)
+            loc = f"{env_file.subdir}/" if env_file.subdir.parts else ""
+            vault_path = vault_manager.get_vault_path(repo.name, env_name, subdir)
 
             # Skip unchanged files: SOPS encryption is non-deterministic, so
             # re-encrypting an unchanged file still produces a noisy git diff.
@@ -258,7 +260,7 @@ def push(
                 vault_decrypted = sops.decrypt(vault_path)
                 if diff_calc.calculate(vault_decrypted, local_normalized).is_clean():
                     console.print(
-                        f"  ⊘ [dim]{env_file.filename} → {env_name}.env (no changes)[/dim]"
+                        f"  ⊘ [dim]{loc}{env_file.filename} → {loc}{env_name}.env (no changes)[/dim]"
                     )
                     skipped_count += 1
                     continue
@@ -279,7 +281,7 @@ def push(
                 sops.encrypt(tmp_path, vault_path)
                 tmp_path.unlink()
 
-            console.print(f"  ✓ {env_file.filename} → {env_name}.env")
+            console.print(f"  ✓ {loc}{env_file.filename} → {loc}{env_name}.env")
             pushed_count += 1
 
     # Summary
@@ -335,10 +337,13 @@ def status() -> None:
 
         for env_file in env_files:
             env_name = vault_manager.map_env_filename(env_file.filename)
-            vault_path = vault_manager.get_vault_path(repo.name, env_name)
+            loc = f"{env_file.subdir}/" if env_file.subdir.parts else ""
+            vault_path = vault_manager.get_vault_path(repo.name, env_name, str(env_file.subdir))
 
             if not vault_path.exists():
-                console.print(f"  + [yellow]{env_file.filename}[/yellow] - new file (not in vault)")
+                console.print(
+                    f"  + [yellow]{loc}{env_file.filename}[/yellow] - new file (not in vault)"
+                )
                 continue
 
             # Compare with vault
@@ -348,11 +353,11 @@ def status() -> None:
             diff = diff_calc.calculate(vault_decrypted, local_normalized)
 
             if diff.is_clean():
-                console.print(f"  ✓ [green]{env_file.filename}[/green] - up to date")
+                console.print(f"  ✓ [green]{loc}{env_file.filename}[/green] - up to date")
             else:
                 num_changes = len(diff.added) + len(diff.removed) + len(diff.modified)
                 console.print(
-                    f"  ⚠ [yellow]{env_file.filename}[/yellow] - {num_changes} keys changed"
+                    f"  ⚠ [yellow]{loc}{env_file.filename}[/yellow] - {num_changes} keys changed"
                 )
 
         console.print()

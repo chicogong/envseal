@@ -17,9 +17,18 @@ class VaultManager:
         secrets_dir = self.config.vault_path / "secrets"
         secrets_dir.mkdir(parents=True, exist_ok=True)
 
-    def get_vault_path(self, repo_name: str, env_name: str) -> Path:
-        """Get the vault path for a specific repo and environment."""
-        return self.config.vault_path / "secrets" / repo_name / f"{env_name}.env"
+    def get_vault_path(self, repo_name: str, env_name: str, subdir: str = "") -> Path:
+        """Get the vault path for a repo's env file.
+
+        ``subdir`` is the file's directory relative to the repo root; the
+        repo's root .env keeps the flat path secrets/<repo>/<env>.env, while a
+        nested .env mirrors its location at secrets/<repo>/<subdir>/<env>.env.
+        """
+        base = self.config.vault_path / "secrets" / repo_name
+        sub = Path(subdir)
+        if sub.parts:
+            base = base / sub
+        return base / f"{env_name}.env"
 
     def map_env_filename(self, filename: str) -> str:
         """Map .env filename to environment name using config mapping."""

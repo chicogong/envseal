@@ -20,6 +20,11 @@ class EnvFile:
         """Get the filename."""
         return self.filepath.name
 
+    @property
+    def subdir(self) -> Path:
+        """This file's directory relative to the repo root ('.' for the root)."""
+        return self.filepath.parent.relative_to(self.repo_path)
+
     def get_hash(self) -> str:
         """Get SHA256 hash of file contents."""
         return hashlib.sha256(self.filepath.read_bytes()).hexdigest()
@@ -32,19 +37,21 @@ class Scanner:
         self.config = scan_config
 
     def scan_repo(self, repo_path: Path) -> list[EnvFile]:
-        """Scan a repository's top-level directory for .env files.
+        """Scan a repository (recursively) for .env files.
 
-        Only the repo root is scanned, never subdirectories: a nested .env
-        (e.g. sub/dir/.env) would otherwise map to the same vault path as the
-        root .env and silently overwrite it. To manage a subdirectory's .env,
-        register that subdirectory as its own repo entry.
+        Each file's location within the repo is preserved (see EnvFile.subdir)
+        so a nested .env maps to its own vault path instead of colliding with
+        the repo's root .env.
         """
         env_files: list[EnvFile] = []
         if not repo_path.is_dir():
             return env_files
 
-        for path in sorted(repo_path.iterdir()):
-            # Skip if not a file
+        for path in sorted(repo_path.rglob("*")):
+            # Skip anything inside an ignored directory (.git, node_modules, ...)
+            if any(ignored in path.parts for ignored in self.config.ignore_dirs):
+                continue
+
             if not path.is_file():
                 continue
 

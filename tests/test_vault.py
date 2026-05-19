@@ -20,6 +20,19 @@ def test_get_vault_path_for_env(temp_dir):
     assert path == vault_path / "secrets" / "my-repo" / "prod.env"
 
 
+def test_get_vault_path_with_subdir(temp_dir):
+    """A nested env file maps to a vault path mirroring its location in the repo."""
+    vault_path = temp_dir / "vault"
+    vault = VaultManager(Config(vault_path=vault_path))
+    secrets = vault_path / "secrets" / "my-repo"
+
+    assert vault.get_vault_path("my-repo", "local") == secrets / "local.env"
+    assert vault.get_vault_path("my-repo", "local", ".") == secrets / "local.env"
+    assert (
+        vault.get_vault_path("my-repo", "local", "frontend") == secrets / "frontend" / "local.env"
+    )
+
+
 def test_ensure_vault_structure(temp_dir):
     """Test creating vault directory structure."""
     vault_path = temp_dir / "vault"

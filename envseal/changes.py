@@ -1,4 +1,5 @@
 """Change detection and collection for envseal update command."""
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -14,6 +15,7 @@ from envseal.vault import VaultManager
 @dataclass
 class ChangeInfo:
     """Information about a changed .env file."""
+
     repo_name: str
     env_name: str
     env_file: EnvFile
@@ -75,7 +77,9 @@ class ChangeCollector:
 
         return changes
 
-    def _scan_repo_changes(self, repo_name: str, env_filter: Optional[str] = None) -> list[ChangeInfo]:
+    def _scan_repo_changes(
+        self, repo_name: str, env_filter: Optional[str] = None
+    ) -> list[ChangeInfo]:
         """Scan a repository for changes.
 
         Args:
@@ -111,7 +115,9 @@ class ChangeCollector:
 
         return changes
 
-    def _check_file_changes(self, repo_name: str, env_file: EnvFile, env_name: str) -> Optional[ChangeInfo]:
+    def _check_file_changes(
+        self, repo_name: str, env_file: EnvFile, env_name: str
+    ) -> Optional[ChangeInfo]:
         """Check if a file has changes compared to vault.
 
         Args:
@@ -122,8 +128,8 @@ class ChangeCollector:
         Returns:
             ChangeInfo if changes detected, None otherwise
         """
-        # Get vault path for this file
-        vault_path = self.vault_manager.get_vault_path(repo_name, env_name)
+        # Get vault path for this file (mirrors its location within the repo)
+        vault_path = self.vault_manager.get_vault_path(repo_name, env_name, str(env_file.subdir))
 
         # Skip if file doesn't exist in vault (needs push, not update)
         if not vault_path.exists():

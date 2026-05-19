@@ -142,8 +142,8 @@ def test_scanner_skips_template_files(temp_dir):
     assert found == {".env", ".env.prod"}
 
 
-def test_scanner_scans_top_level_only(temp_dir):
-    """Only the repo root is scanned; nested .env files are not collected."""
+def test_scanner_recurses_and_records_subdir(temp_dir):
+    """Scanner recurses; each file records its subdir for a distinct vault path."""
     repo = temp_dir / "repo"
     (repo / "sub" / "deep").mkdir(parents=True)
     (repo / ".env").write_text("KEY=root")
@@ -151,7 +151,8 @@ def test_scanner_scans_top_level_only(temp_dir):
     (repo / "sub" / "deep" / ".env").write_text("KEY=deeper")
 
     scanner = Scanner(ScanConfig())
-    found = scanner.scan_repo(repo)
+    found = {str(ef.subdir): ef for ef in scanner.scan_repo(repo)}
 
-    assert len(found) == 1
-    assert found[0].filepath == repo / ".env"
+    assert set(found) == {".", "sub", "sub/deep"}
+    assert found["."].filepath == repo / ".env"
+    assert found["sub"].filepath == repo / "sub" / ".env"
