@@ -20,8 +20,7 @@ def has_age_and_sops():
 
 
 requires_sops = pytest.mark.skipif(
-    not has_age_and_sops(),
-    reason="age-keygen and/or sops CLI not installed"
+    not has_age_and_sops(), reason="age-keygen and/or sops CLI not installed"
 )
 
 

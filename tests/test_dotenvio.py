@@ -52,7 +52,7 @@ SPECIAL="value=with=equals"
     dotenv = DotEnvIO()
     normalized = dotenv.normalize(env_file)
 
-    assert 'SIMPLE=value' in normalized
+    assert "SIMPLE=value" in normalized
     assert 'WITH_SPACES="value with spaces"' in normalized
     assert 'SPECIAL="value=with=equals"' in normalized
 

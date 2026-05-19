@@ -17,10 +17,7 @@ def has_age_keygen():
         return False
 
 
-requires_age = pytest.mark.skipif(
-    not has_age_keygen(),
-    reason="age-keygen CLI not installed"
-)
+requires_age = pytest.mark.skipif(not has_age_keygen(), reason="age-keygen CLI not installed")
 
 
 @requires_age

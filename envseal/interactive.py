@@ -1,4 +1,5 @@
 """Interactive selection UI for envseal update command."""
+
 import sys
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -12,6 +13,7 @@ from rich.table import Table
 @dataclass
 class SelectionItem:
     """Item for interactive selection."""
+
     id: str  # Unique identifier (e.g., "repo_name/env_name")
     display: str  # Display text
     description: str  # Additional info
@@ -70,16 +72,10 @@ class InteractiveSelector:
 
         for i, item in enumerate(self.items):
             # Selection indicator
-            if i == self.cursor:
-                selection = "[bold cyan]>[/bold cyan] "
-            else:
-                selection = "  "
+            selection = "[bold cyan]>[/bold cyan] " if i == self.cursor else "  "
 
             # Checkbox
-            if item.selected:
-                checkbox = "[green][X][/green]"
-            else:
-                checkbox = "[ ]"
+            checkbox = "[green][X][/green]" if item.selected else "[ ]"
 
             # Display text with description
             display = f"{item.display}"
@@ -88,10 +84,7 @@ class InteractiveSelector:
 
             # Add row with highlighting for cursor position
             if i == self.cursor:
-                table.add_row(
-                    f"{selection}{checkbox}",
-                    f"[bold]{display}[/bold]"
-                )
+                table.add_row(f"{selection}{checkbox}", f"[bold]{display}[/bold]")
             else:
                 table.add_row(f"{selection}{checkbox}", display)
 
@@ -99,9 +92,7 @@ class InteractiveSelector:
         help_text = "\n[dim]↑↓/jk: navigate  Space: toggle  a: all  n: none  Enter: confirm  q/Esc: cancel[/dim]"
 
         return Panel(
-            str(table) + help_text,
-            title="[bold]Select items to update[/bold]",
-            border_style="cyan"
+            str(table) + help_text, title="[bold]Select items to update[/bold]", border_style="cyan"
         )
 
     def _handle_input(self, live: Live) -> bool:
@@ -112,21 +103,21 @@ class InteractiveSelector:
         """
         key = self._get_key()
 
-        if key in ['q', '\x1b']:  # q or Escape
+        if key in ["q", "\x1b"]:  # q or Escape
             self.cancelled = True
             return True
-        elif key == '\r':  # Enter
+        elif key == "\r":  # Enter
             return True
-        elif key in ['\x1b[A', 'k']:  # Up arrow or k
+        elif key in ["\x1b[A", "k"]:  # Up arrow or k
             self.cursor = max(0, self.cursor - 1)
-        elif key in ['\x1b[B', 'j']:  # Down arrow or j
+        elif key in ["\x1b[B", "j"]:  # Down arrow or j
             self.cursor = min(len(self.items) - 1, self.cursor + 1)
-        elif key == ' ':  # Spacebar
+        elif key == " ":  # Spacebar
             self.items[self.cursor].selected = not self.items[self.cursor].selected
-        elif key == 'a':  # Select all
+        elif key == "a":  # Select all
             for item in self.items:
                 item.selected = True
-        elif key == 'n':  # Select none
+        elif key == "n":  # Select none
             for item in self.items:
                 item.selected = False
 
@@ -137,8 +128,8 @@ class InteractiveSelector:
         """Read a single key from stdin."""
         try:
             # Unix/Linux/macOS
-            import tty
             import termios
+            import tty
 
             fd = sys.stdin.fileno()
             old_settings = termios.tcgetattr(fd)
@@ -146,7 +137,7 @@ class InteractiveSelector:
                 tty.setraw(sys.stdin.fileno())
                 key = sys.stdin.read(1)
                 # Check for escape sequences
-                if key == '\x1b':
+                if key == "\x1b":
                     key += sys.stdin.read(2)
                 return key
             finally:
@@ -154,5 +145,6 @@ class InteractiveSelector:
         except ImportError:
             # Windows fallback
             import msvcrt
-            key = msvcrt.getch().decode('utf-8', errors='ignore')
+
+            key = msvcrt.getch().decode("utf-8", errors="ignore")
             return key
