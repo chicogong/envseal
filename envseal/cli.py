@@ -730,10 +730,16 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
         safe = _html.escape(repo_name)
         rows = [f'<h2 id="{safe}">{safe} <span class="count">{total} keys</span></h2>']
         envs = sorted({Path(rel).stem for rel, _ in files})
-        cmds = " ".join(
+        restore_cmds = " ".join(
             f"<code>envseal pull {safe} --env {_html.escape(e)} --replace</code>" for e in envs
         )
-        rows.append(f'<div class="howto">Retrieve &rarr; {cmds}</div>')
+        copy_cmds = " ".join(
+            f"<code>envseal pull {safe} --env {_html.escape(e)} --stdout &gt; "
+            f"{safe}-{_html.escape(e)}.env</code>"
+            for e in envs
+        )
+        rows.append(f'<div class="howto"><b>Restore into project</b> &rarr; {restore_cmds}</div>')
+        rows.append(f'<div class="howto"><b>Get a copy</b> &rarr; {copy_cmds}</div>')
         for rel, keys in files:
             rows.append(f'<div class="file">{_html.escape(rel)}</div>')
             if keys:
