@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pull` temp-file mode no longer falsely claims the decrypted file is auto-deleted; the file is created with `0600` permissions and the message is accurate
 - `status`, `diff` and `pull` print a friendly "run envseal init" message instead of a traceback when the config or age key is missing
 - The scanner no longer ingests `.backup` files (left by `pull --replace`) or `.example` / `.sample` template files as real env files
+- `pull --stdout` is written raw instead of through Rich, which line-wrapped output at 80 columns when redirected to a file and corrupted any value longer than the wrap point
+- `pull --stdout` for an environment backed by multiple env files guarantees a newline between concatenated files and prints a stderr heads-up; the HTML report no longer offers a single-file `--stdout` copy command for such environments (it points to `--replace` instead)
 
 ## [0.2.0] - 2025-12-23
 
