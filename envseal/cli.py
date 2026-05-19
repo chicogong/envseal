@@ -404,49 +404,38 @@ def diff(
     dotenv_io = DotEnvIO()
     diff_calc = DiffCalculator()
 
-    # Find local file
+    # Find all local files for this environment (root and any nested)
     env_files = scanner.scan_repo(repo.path)
-    local_file = next(
-        (ef for ef in env_files if vault_manager.map_env_filename(ef.filename) == env), None
-    )
+    matches = [ef for ef in env_files if vault_manager.map_env_filename(ef.filename) == env]
 
-    if not local_file:
+    if not matches:
         console.print(f"[red]No .env file for '{env}' environment found locally.[/red]")
         raise typer.Exit(1)
 
-    # Get vault file
-    vault_path = vault_manager.get_vault_path(repo_name, env)
-    if not vault_path.exists():
-        console.print("[yellow]File not in vault yet. All keys are new.[/yellow]")
-        raise typer.Exit(0)
+    for local_file in matches:
+        loc = f"{local_file.subdir}/" if local_file.subdir.parts else ""
+        console.print(f"[bold cyan]{loc}{local_file.filename}[/bold cyan]")
 
-    # Calculate diff
-    local_normalized = dotenv_io.normalize(local_file.filepath)
-    vault_decrypted = sops.decrypt(vault_path)
+        vault_path = vault_manager.get_vault_path(repo_name, env, str(local_file.subdir))
+        if not vault_path.exists():
+            console.print("  [yellow]not in vault yet — all keys are new[/yellow]\n")
+            continue
 
-    diff_result = diff_calc.calculate(vault_decrypted, local_normalized)
+        diff_result = diff_calc.calculate(
+            sops.decrypt(vault_path), dotenv_io.normalize(local_file.filepath)
+        )
+        if diff_result.is_clean():
+            console.print("  [green]no changes[/green]\n")
+            continue
 
-    if diff_result.is_clean():
-        console.print("[green]No changes[/green]")
-        return
-
-    # Show diff
-    if diff_result.added:
-        console.print("[green]+ ADDED:[/green]")
-        for key in sorted(diff_result.added):
-            console.print(f"  - {key}")
-        console.print()
-
-    if diff_result.modified:
-        console.print("[yellow]~ MODIFIED:[/yellow]")
-        for key in sorted(diff_result.modified):
-            console.print(f"  - {key}")
-        console.print()
-
-    if diff_result.removed:
-        console.print("[red]- REMOVED:[/red]")
-        for key in sorted(diff_result.removed):
-            console.print(f"  - {key}")
+        if diff_result.added:
+            console.print("  [green]+ ADDED:[/green]    " + ", ".join(sorted(diff_result.added)))
+        if diff_result.modified:
+            console.print(
+                "  [yellow]~ MODIFIED:[/yellow] " + ", ".join(sorted(diff_result.modified))
+            )
+        if diff_result.removed:
+            console.print("  [red]- REMOVED:[/red]  " + ", ".join(sorted(diff_result.removed)))
         console.print()
 
     console.print(f"Use [cyan]'envseal push {repo_name} --env {env}'[/cyan] to sync.")
@@ -484,57 +473,59 @@ def pull(
     vault_manager = VaultManager(config)
     sops = SopsManager(age_public_key=public_key, age_key_file=key_path)
 
-    # Get vault file
-    vault_path = vault_manager.get_vault_path(repo_name, env)
-    if not vault_path.exists():
+    # Find every vault file for this repo + environment (root and nested)
+    repo_vault_dir = vault_manager.get_repo_vault_dir(repo_name)
+    vault_files = sorted(repo_vault_dir.rglob(f"{env}.env")) if repo_vault_dir.is_dir() else []
+    if not vault_files:
         console.print(f"[red]No vault file for {repo_name}/{env}[/red]")
         raise typer.Exit(1)
 
-    # Decrypt
-    decrypted = sops.decrypt(vault_path)
+    # Reverse-map the environment name to a local .env filename
+    env_filename = next(
+        (pattern for pattern, mapped in config.env_mapping.items() if mapped == env),
+        f".env.{env}",
+    )
 
     if stdout:
-        # Output to stdout
-        console.print(decrypted, end="")
+        for vault_file in vault_files:
+            sub = vault_file.parent.relative_to(repo_vault_dir)
+            if sub.parts:
+                console.print(f"# --- {sub}/{env_filename} ---")
+            console.print(sops.decrypt(vault_file), end="")
     elif replace:
-        # Replace local file
-        # Find the corresponding local file
-        env_filename = None
-        for pattern, mapped_env in config.env_mapping.items():
-            if mapped_env == env:
-                env_filename = pattern
-                break
+        import shutil
 
-        if not env_filename:
-            env_filename = f".env.{env}"
+        for vault_file in vault_files:
+            sub = vault_file.parent.relative_to(repo_vault_dir)
+            local_path = repo.path / sub / env_filename
+            local_path.parent.mkdir(parents=True, exist_ok=True)
 
-        local_path = repo.path / env_filename
+            # Backup existing file
+            if local_path.exists():
+                backup_path = local_path.with_suffix(local_path.suffix + ".backup")
+                shutil.copy2(local_path, backup_path)
+                console.print(f"✓ Backed up to {backup_path}")
 
-        # Backup existing file
-        if local_path.exists():
-            backup_path = local_path.with_suffix(local_path.suffix + ".backup")
-            import shutil
-
-            shutil.copy2(local_path, backup_path)
-            console.print(f"✓ Backed up to {backup_path}")
-
-        local_path.write_text(decrypted)
-        console.print(f"✅ Pulled to {local_path}")
+            local_path.write_text(sops.decrypt(vault_file))
+            console.print(f"✅ Pulled to {local_path}")
     else:
         # Write to a private temp directory (mkdtemp creates it with 0700 perms)
         import os
         import tempfile
 
         temp_dir = Path(tempfile.mkdtemp(prefix="envseal-"))
-        temp_file = temp_dir / f"{env}.env"
-        temp_file.write_text(decrypted)
-        os.chmod(temp_file, 0o600)
+        for vault_file in vault_files:
+            sub = vault_file.parent.relative_to(repo_vault_dir)
+            temp_file = temp_dir / sub / f"{env}.env"
+            temp_file.parent.mkdir(parents=True, exist_ok=True)
+            temp_file.write_text(sops.decrypt(vault_file))
+            os.chmod(temp_file, 0o600)
+            console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
 
-        console.print(f"✅ Decrypted to: [cyan]{temp_file}[/cyan]")
         console.print(
-            "\n⚠️  [yellow]This is a plaintext secrets file and is NOT auto-deleted.[/yellow]"
+            "\n⚠️  [yellow]These are plaintext secrets files and are NOT auto-deleted.[/yellow]"
         )
-        console.print(f"   Remove it when done: [cyan]rm -rf {temp_dir}[/cyan]")
+        console.print(f"   Remove them when done: [cyan]rm -rf {temp_dir}[/cyan]")
 
 
 @app.command()

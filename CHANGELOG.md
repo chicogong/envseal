@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `push` skips re-encrypting unchanged files, so SOPS's non-deterministic output no longer produces noisy vault git diffs
 - A nested `.env` (e.g. `sub/dir/.env`) is stored at a vault path mirroring its location (`secrets/<repo>/sub/dir/<env>.env`) instead of colliding with — and silently overwriting — the repo's root `.env`
+- `diff` and `pull` now cover every env file in a repo — including nested ones — instead of only the first match
 
 ### Fixed
 - `pull` temp-file mode no longer falsely claims the decrypted file is auto-deleted; the file is created with `0600` permissions and the message is accurate

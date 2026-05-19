@@ -23,9 +23,6 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
   overwrites any existing config; there is no interactive selection.
 - **No `doctor`** — no diagnostic for the sops/age install, key permissions or
   vault state.
-- **`diff` / `pull` handle one file per repo+env** — `push` / `status` cover
-  every nested `.env`, but `diff` shows and `pull` restores only the first
-  match, not all of a monorepo's env files.
 - **Shell completion disabled** — `add_completion=False` in the Typer app.
 - **`--env` default is inconsistent** — `push` / `update` default to all
   environments, `diff` / `pull` default to `prod`.
