@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EnvSeal — encrypted .env management for the AI-coding era</title>
+<meta name="description" content="EnvSeal scans .env files across all your repositories and syncs them into one SOPS + age encrypted Git vault. No server, no account. Built for the AI-coding workflow.">
+<style>
+:root {
+  --bg: #0a0b0d; --grid: rgba(255,255,255,.022);
+  --panel: #101217; --panel-2: #15181e; --line: #23272f; --line-2: #343a44;
+  --text: #d8dbe1; --muted: #888e9a; --faint: #565c67;
+  --accent: #e8b23c; --accent-2: #f1cd76; --accent-dim: rgba(232,178,60,.13);
+  --ok: #5cc97f;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--mono); font-size: 14px; line-height: 1.65; color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent); color: var(--bg); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-2); }
+.wrap { max-width: 940px; margin: 0 auto; padding: 0 1.2rem; }
+
+/* hero */
+.hero { padding: 4.5rem 0 3rem; border-bottom: 1px solid var(--line); }
+.tagchip {
+  display: inline-block; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid var(--accent-dim); background: var(--accent-dim);
+  padding: .25rem .6rem; margin-bottom: 1.4rem;
+}
+h1 {
+  font-size: clamp(2.4rem, 7vw, 4rem); font-weight: 700; letter-spacing: .02em;
+  margin: 0; line-height: 1;
+}
+h1 .lock { color: var(--accent); }
+.lede { font-size: clamp(1rem, 2.4vw, 1.25rem); color: var(--muted); margin: 1.1rem 0 2rem; max-width: 38ch; }
+.lede b { color: var(--text); font-weight: 700; }
+
+/* install box */
+.install {
+  display: flex; align-items: center; gap: .6rem; max-width: 460px;
+  border: 1px solid var(--line); background: var(--panel); padding: .65rem .8rem;
+}
+.install .p { color: var(--accent); font-weight: 700; }
+.install code { flex: 1; color: var(--text); font-size: .92rem; }
+.install button {
+  font: inherit; font-size: .64rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
+  background: var(--accent); color: var(--bg); border: none; padding: .35rem .6rem; cursor: pointer;
+}
+.install button.copied { background: var(--ok); }
+.cta { display: flex; gap: .7rem; flex-wrap: wrap; margin-top: 1.4rem; }
+.btn {
+  font-size: .78rem; letter-spacing: .04em; padding: .6rem 1.1rem; border: 1px solid var(--line-2);
+  color: var(--text); background: var(--panel);
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.btn.primary:hover { background: var(--accent-2); color: var(--bg); }
+
+/* sections */
+section { padding: 3.2rem 0; border-bottom: 1px solid var(--line); }
+.kicker {
+  font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+  margin: 0 0 1.4rem;
+}
+h2 { font-size: 1.5rem; font-weight: 700; margin: 0 0 1.3rem; letter-spacing: .01em; }
+
+/* feature grid */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.cell { background: var(--panel); padding: 1.3rem 1.2rem; }
+.cell .ic { color: var(--accent); font-size: 1.1rem; }
+.cell h3 { font-size: .95rem; margin: .5rem 0 .35rem; font-weight: 700; }
+.cell p { font-size: .82rem; color: var(--muted); margin: 0; }
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.step { border: 1px solid var(--line); background: var(--panel); padding: 1.2rem; }
+.step .n { color: var(--accent); font-weight: 700; font-size: 1.6rem; line-height: 1; }
+.step h3 { font-size: .9rem; margin: .5rem 0 .3rem; }
+.step code { display: block; color: var(--accent-2); font-size: .78rem; margin-top: .5rem; word-break: break-all; }
+.step p { font-size: .8rem; color: var(--muted); margin: .35rem 0 0; }
+
+/* code block */
+pre {
+  background: var(--panel); border: 1px solid var(--line); border-left: 2px solid var(--accent);
+  padding: 1rem 1.1rem; overflow-x: auto; font-size: .8rem; color: var(--muted); margin: 0;
+}
+pre .c { color: var(--text); }
+.note { color: var(--faint); font-size: .8rem; margin-top: 1rem; }
+
+/* positioning row */
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.fact { border: 1px solid var(--line); background: var(--panel); padding: 1.2rem; }
+.fact b { color: var(--accent); font-size: 1.05rem; }
+.fact span { display: block; color: var(--muted); font-size: .82rem; margin-top: .3rem; }
+
+footer { padding: 2.4rem 0 3.2rem; color: var(--faint); font-size: .78rem; }
+footer a { color: var(--muted); }
+footer .links { display: flex; gap: 1.3rem; flex-wrap: wrap; margin-bottom: .9rem; }
+
+@media (max-width: 680px) {
+  .grid, .steps, .facts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="tagchip">SOPS + age · multi-repo · no server</span>
+    <h1><span class="lock">&#9919;</span> EnvSeal</h1>
+    <p class="lede">Encrypted <b>.env</b> management for the <b>AI-coding era</b> —
+      one vault for every project's secrets.</p>
+    <div class="install">
+      <span class="p">$</span>
+      <code id="cmd">pipx install envseal-vault</code>
+      <button id="copy" type="button">copy</button>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/chicogong/envseal">GitHub repo &rarr;</a>
+      <a class="btn" href="https://pypi.org/project/envseal-vault/">PyPI</a>
+      <a class="btn" href="https://github.com/chicogong/envseal/blob/master/docs/ai-agents.md">AI agent guide</a>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The problem</p>
+    <h2>AI coding produces many small projects.<br>Each one has its own <code>.env</code>.</h2>
+    <p style="color:var(--muted);max-width:62ch;margin:0;">
+      Claude Code, Cursor and friends make it cheap to spin up a dozen repos a
+      month. The secrets sprawl is the cost. EnvSeal scans every repository,
+      normalizes the <code>.env*</code> files, and syncs them into <b>one
+      SOPS&nbsp;+&nbsp;age encrypted Git vault</b> that you fully own — no SaaS,
+      no account, no lock-in.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">What you get</p>
+    <div class="grid">
+      <div class="cell"><div class="ic">&#9919;</div><h3>SOPS + age encryption</h3>
+        <p>Modern, battle-tested crypto. Values are encrypted at rest in your own Git repo.</p></div>
+      <div class="cell"><div class="ic">&#9778;</div><h3>One central vault</h3>
+        <p>Scan N repositories, keep a single encrypted vault. Unlimited projects.</p></div>
+      <div class="cell"><div class="ic">&#9670;</div><h3>Key-only diffs</h3>
+        <p><code>diff</code>, <code>list</code> and <code>status</code> show key names — never values.</p></div>
+      <div class="cell"><div class="ic">&#8635;</div><h3>One-command restore</h3>
+        <p>New laptop? <code>envseal pull</code> rebuilds a project's <code>.env</code> in seconds.</p></div>
+      <div class="cell"><div class="ic">&#9707;</div><h3>Shareable HTML report</h3>
+        <p><code>envseal report</code> writes a static, key-only dashboard. Safe to share.</p></div>
+      <div class="cell"><div class="ic">&#129302;</div><h3>AI-agent ready</h3>
+        <p>A drop-in <code>CLAUDE.md</code>/<code>AGENTS.md</code> snippet lets agents fetch secrets themselves.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>init</h3>
+        <code>envseal init</code>
+        <p>Generate an age key, scan your repos, point at your vault.</p></div>
+      <div class="step"><div class="n">2</div><h3>push</h3>
+        <code>envseal push --commit</code>
+        <p>Encrypt every <code>.env*</code> with SOPS and commit it to the vault.</p></div>
+      <div class="step"><div class="n">3</div><h3>pull</h3>
+        <code>envseal pull &lt;project&gt; --env local --replace</code>
+        <p>Decrypt a project's secrets back into place — on any machine.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">For AI coding agents</p>
+    <h2>Make your agent EnvSeal-aware</h2>
+    <p style="color:var(--muted);max-width:62ch;margin:0 0 1.1rem;">
+      Paste this into a project's <code>CLAUDE.md</code>, <code>AGENTS.md</code>
+      or <code>.cursorrules</code>. When the agent hits a missing
+      <code>.env</code>, it runs one command instead of stalling or inventing
+      fake keys:</p>
+<pre><span class="c">## Secrets &amp; environment variables</span>
+
+This project's .env* files are not committed — they are
+managed with EnvSeal (encrypted in a separate vault).
+
+- Create the local .env:
+  <span class="c">envseal pull &lt;PROJECT&gt; --env local --replace</span>
+- After editing a secret, sync it back:
+  <span class="c">envseal push --commit</span>
+- See which keys exist without decrypting: <span class="c">envseal list</span>
+- Never commit .env*, never print secret values into logs.</pre>
+    <p class="note">More ready-to-paste prompts &mdash;
+      <a href="https://github.com/chicogong/envseal/blob/master/docs/ai-agents.md">docs/ai-agents.md</a></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Why EnvSeal</p>
+    <div class="facts">
+      <div class="fact"><b>No server</b><span>No account, no SaaS, no monthly bill. Your vault is just a Git repo.</span></div>
+      <div class="fact"><b>Multi-repo first</b><span>Built for many projects at once — not one repo, not a hosted service.</span></div>
+      <div class="fact"><b>You own the keys</b><span>age private key stays on your machine; the vault is yours to host.</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/chicogong/envseal">GitHub</a>
+      <a href="https://pypi.org/project/envseal-vault/">PyPI</a>
+      <a href="https://github.com/chicogong/envseal/blob/master/README.md">Docs</a>
+      <a href="https://github.com/chicogong/envseal/blob/master/docs/ai-agents.md">AI agent guide</a>
+      <a href="https://github.com/chicogong/envseal/blob/master/CHANGELOG.md">Changelog</a>
+    </div>
+    EnvSeal &middot; Apache-2.0 &middot; the installable package is
+    <code>envseal-vault</code>, the CLI is <code>envseal</code>.
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById('copy');
+  btn.addEventListener('click', function () {
+    var text = document.getElementById('cmd').textContent;
+    var done = function () {
+      btn.textContent = 'copied'; btn.classList.add('copied');
+      setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () {});
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+</body>
+</html>

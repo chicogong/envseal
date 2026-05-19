@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-05-19
+
+### Fixed
+- The interactive `update` selector rendered `str(table)` — a Rich object repr (`<rich.table.Table object at 0x…>`) — instead of the repo list. It now wraps the table in a `rich.console.Group` so the picker shows the actual repos (bug present since `update` shipped in 0.2.0)
+
+### Added
+- `docs/ai-agents.md` — ready-to-paste prompts that make AI coding agents (Claude Code, Cursor, …) EnvSeal-aware: a project snippet, a machine-onboarding prompt, and a new-machine restore prompt
+- README (EN + zh-CN) gains a "Using EnvSeal with AI Coding Agents" section
+- A static landing page (`docs/index.html`), published via GitHub Pages
+
 ## [0.3.1] - 2026-05-19
 
 ### Fixed

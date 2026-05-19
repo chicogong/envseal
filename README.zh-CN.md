@@ -71,6 +71,26 @@ graph LR
 - 👥 **团队协作**：通过私有 vault 安全分享密钥（支持多 age key）
 - 🔐 **密钥轮换**：用 Git 历史追踪"谁改了什么密钥、为什么改"
 
+## 🤖 配合 AI 编程助手使用
+
+EnvSeal 就是为 AI coding 工作流设计的 —— 让你的 agent「认识」EnvSeal。
+把下面这段粘进项目的 agent 指令文件(`CLAUDE.md`、`AGENTS.md`、`.cursorrules` 等),
+agent 遇到缺 `.env` 时会自己去取,而不是卡住或编造假密钥:
+
+```markdown
+## Secrets & environment variables
+
+本项目的 `.env*` 文件不入库 —— 由 EnvSeal 管理(加密存在独立 vault 里)。
+
+- 生成本地 `.env`：`envseal pull <PROJECT> --env local --replace`
+- 改完密钥同步回去：`envseal push --commit`
+- 不解密查看有哪些 key：`envseal list`
+- 绝不提交 `.env*`,绝不把密钥值打印到对话或日志里。
+```
+
+更多可直接粘贴的 prompt(初始化整机、新电脑恢复、浏览 key)见
+**[docs/ai-agents.md](docs/ai-agents.md)**。
+
 ## ⚡ 快速开始
 
 ### 📋 首次使用完整流程（新手向）

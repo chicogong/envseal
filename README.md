@@ -93,6 +93,28 @@ Git vault, no server, no account.
 **Pick EnvSeal if** you have many small projects (the AI-coding reality) and
 want one encrypted, Git-versioned vault you fully own — no SaaS, no lock-in.
 
+## 🤖 Using EnvSeal with AI Coding Agents
+
+EnvSeal is built for the AI-coding workflow — so make your agent
+EnvSeal-aware. Paste this into the project's agent-instructions file
+(`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, …) and the agent will fetch
+secrets itself instead of stalling or inventing fake keys:
+
+```markdown
+## Secrets & environment variables
+
+This project's `.env*` files are not committed — they are managed with
+EnvSeal (encrypted in a separate vault).
+
+- Create the local `.env`: `envseal pull <PROJECT> --env local --replace`
+- After editing a secret, sync it back: `envseal push --commit`
+- See which keys exist without decrypting: `envseal list`
+- Never commit `.env*`, never print secret values into chat or logs.
+```
+
+More ready-to-paste prompts — onboarding a machine, restoring on a new
+laptop, browsing keys — are in **[docs/ai-agents.md](docs/ai-agents.md)**.
+
 ## ⚡ Quick Start
 
 ### 📋 Complete First-Time Setup (Beginner-Friendly)
