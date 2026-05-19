@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-05-19
+
+### Fixed
+- The `LICENSE` file is now Apache-2.0, matching `pyproject.toml`, the README and the PyPI classifiers (it was previously MIT — an inconsistency that shipped in 0.1.0–0.3.0)
+
+### Changed
+- PyPI classifiers add Python 3.13, `Python :: 3 :: Only`, `Environment :: Console`, `Topic :: Utilities` and a System Administrators audience for better discoverability
+- README adds a comparison table positioning EnvSeal against dotenvx / SOPS / dotenv-vault / Doppler
+
+### Docs
+- The bundled Chinese README and the `USAGE.md` / `USAGE.en.md` guides now document `list`, `report` and the `--commit` / `--push` flags (the English README already did in 0.3.0)
+
 ## [0.3.0] - 2026-05-19
 
 ### Added

@@ -21,11 +21,31 @@ leans into exactly this.
 
 ## Discoverability checklist
 
-- Keep PyPI keywords and classifiers accurate and current.
-- A short comparison page (`vs dotenvx`, `vs sops`) helps users searching for
-  alternatives.
-- Repo polish: an accurate "About" blurb and topics, a social-preview image,
-  CI and version badges.
-- Make license metadata consistent — the `LICENSE` file, `pyproject.toml` and
-  the README should agree. They currently disagree: the `LICENSE` file is MIT
-  while `pyproject.toml` and the README state Apache-2.0.
+- ✅ Keep PyPI keywords and classifiers accurate and current — refreshed in
+  0.3.1 (Python 3.13, `Environment :: Console`, `Topic :: Utilities`, etc.).
+- ✅ A short comparison (`vs dotenvx`, `vs sops`, `vs dotenv-vault`, `vs
+  Doppler`) — added as a "How EnvSeal Compares" table in the README (0.3.1).
+- ✅ License metadata is now consistent — the `LICENSE` file, `pyproject.toml`,
+  the README and the PyPI classifiers all state Apache-2.0 (0.3.1; the
+  `LICENSE` file was MIT through 0.1.0–0.3.0).
+- ✅ Version / CI badges in the README (PyPI, Python versions, downloads, CI).
+- ☐ Still open: a social-preview image for the GitHub repo (needs a designed
+  PNG uploaded in repo settings — cannot be done from the repo tree).
+- ☐ Still open: announce on the channels developers actually search —
+  see "Where to announce" below.
+
+## Where to announce
+
+EnvSeal is installable and documented; the remaining discoverability work is
+getting it in front of people. Highest-signal, lowest-effort first:
+
+- **GitHub Topics + About** — keep topics in sync with the positioning above.
+- **r/devops, r/Python, r/commandline** — a short "I built X because Y" post.
+- **Hacker News "Show HN"** — link the repo; the multi-repo + AI-coding angle
+  is the hook.
+- **Awesome lists** — PRs to `awesome-devops`, `awesome-cli-apps`,
+  `awesome-python`, and any `awesome-secrets-management` list.
+- **dev.to / a blog post** — "Managing .env across 30 repos with one encrypted
+  vault"; cross-link from the README.
+- **SOPS / age communities** — EnvSeal is a friendly wrapper around them;
+  their discussion spaces are warm audiences.

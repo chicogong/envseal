@@ -4,8 +4,10 @@
 
 **Secure, centralized environment variable management for the AI coding era**
 
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![Python Version](https://img.shields.io/pypi/pyversions/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![Downloads](https://img.shields.io/pypi/dm/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![CI](https://github.com/chicogong/envseal/actions/workflows/ci.yml/badge.svg)](https://github.com/chicogong/envseal/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
@@ -70,6 +72,26 @@ graph LR
 - 🔄 **Environment Migration**: New machine? One command restores all project secrets
 - 👥 **Team Collaboration**: Share secrets securely via private vault (supports multiple age keys)
 - 🔐 **Secret Rotation**: Git history tracks "who changed what key and why"
+
+## 🆚 How EnvSeal Compares
+
+Most encrypted-dotenv tools manage **one repo** or run as a **hosted service**.
+EnvSeal's niche is the opposite: many local repositories, one self-hosted
+Git vault, no server, no account.
+
+| | **EnvSeal** | dotenvx | SOPS (alone) | dotenv-vault | Doppler / Infisical |
+|---|---|---|---|---|---|
+| Multi-repo, one central vault | ✅ scans N repos | ❌ per-repo | ❌ manual | ❌ per-repo | ✅ (hosted) |
+| Encryption | SOPS + age | built-in | SOPS + age/KMS | proprietary | hosted service |
+| Needs a server / account | ❌ no | ❌ no | ❌ no | ✅ yes | ✅ yes |
+| Storage | your Git repo | your repo | your repo | their cloud | their cloud |
+| Key-only diffs (no values) | ✅ | ❌ | ❌ | ❌ | ➖ |
+| One-command machine restore | ✅ `pull` | ❌ | ❌ | ➖ | ➖ |
+| Shareable key-only HTML report | ✅ `report` | ❌ | ❌ | ❌ | ➖ |
+| Cost | free / OSS | free / OSS | free / OSS | freemium | paid tiers |
+
+**Pick EnvSeal if** you have many small projects (the AI-coding reality) and
+want one encrypted, Git-versioned vault you fully own — no SaaS, no lock-in.
 
 ## ⚡ Quick Start
 
