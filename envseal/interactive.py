@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
@@ -89,10 +89,14 @@ class InteractiveSelector:
                 table.add_row(f"{selection}{checkbox}", display)
 
         # Help text
-        help_text = "\n[dim]↑↓/jk: navigate  Space: toggle  a: all  n: none  Enter: confirm  q/Esc: cancel[/dim]"
+        help_text = "[dim]↑↓/jk: navigate  Space: toggle  a: all  n: none  Enter: confirm  q/Esc: cancel[/dim]"
 
+        # Group keeps both the Table and the help text as real Rich
+        # renderables — str(table) would render the object repr instead.
         return Panel(
-            str(table) + help_text, title="[bold]Select items to update[/bold]", border_style="cyan"
+            Group(table, "", help_text),
+            title="[bold]Select items to update[/bold]",
+            border_style="cyan",
         )
 
     def _handle_input(self, live: Live) -> bool:
