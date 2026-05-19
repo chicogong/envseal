@@ -11,6 +11,8 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
+🌐 [**Website**](https://chicogong.github.io/envseal/) &middot; 📦 [PyPI](https://pypi.org/project/envseal-vault/) &middot; 🤖 [AI agent guide](docs/ai-agents.md)
+
 [English](README.md) | [中文](README.zh-CN.md)
 
 </div>

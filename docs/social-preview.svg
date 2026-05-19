@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d0f13"/>
+      <stop offset="1" stop-color="#08090b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#fade)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1280" height="6" fill="#e8b23c"/>
+
+  <!-- top tag -->
+  <text x="80" y="116" fill="#e8b23c" font-size="23" letter-spacing="6" font-weight="700">SOPS + age</text>
+  <text x="297" y="116" fill="#565c67" font-size="23" letter-spacing="2">·  multi-repo  ·  no server</text>
+
+  <!-- lock mark -->
+  <g transform="translate(82,196)">
+    <rect x="6" y="46" width="100" height="80" rx="11" fill="none" stroke="#e8b23c" stroke-width="9"/>
+    <path d="M27 46 V30 a29 29 0 0 1 58 0 V46" fill="none" stroke="#e8b23c" stroke-width="9"/>
+    <circle cx="56" cy="82" r="12" fill="#e8b23c"/>
+    <rect x="50.5" y="82" width="11" height="27" rx="5.5" fill="#e8b23c"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="222" y="312" fill="#e9ecf1" font-size="130" font-weight="700" letter-spacing="2">EnvSeal</text>
+
+  <!-- tagline (single line — no overlap) -->
+  <text x="84" y="398" fill="#c6cbd4" font-size="37" font-weight="600">One encrypted vault for <tspan fill="#e8b23c" font-weight="700">every repo's .env</tspan></text>
+
+  <!-- sub-tagline -->
+  <text x="84" y="446" fill="#8b919c" font-size="27">SOPS + age encryption  ·  key-only diffs  ·  built for AI coding</text>
+
+  <!-- install command box -->
+  <rect x="84" y="488" width="566" height="76" rx="6" fill="#15181e" stroke="#2a2f38" stroke-width="2"/>
+  <text x="112" y="535" fill="#e8b23c" font-size="31" font-weight="700">$</text>
+  <text x="145" y="535" fill="#d8dbe1" font-size="31">pipx install envseal-vault</text>
+
+  <!-- footer -->
+  <text x="84" y="602" fill="#565c67" font-size="23">github.com/chicogong/envseal</text>
+  <text x="1196" y="602" fill="#565c67" font-size="23" text-anchor="end">Apache-2.0  ·  Python</text>
+</svg>

@@ -4,10 +4,14 @@
 
 **AI 编程时代的安全、集中式环境变量管理工具**
 
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![Python Version](https://img.shields.io/pypi/pyversions/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![Downloads](https://img.shields.io/pypi/dm/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
+[![CI](https://github.com/chicogong/envseal/actions/workflows/ci.yml/badge.svg)](https://github.com/chicogong/envseal/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
+🌐 [**官网**](https://chicogong.github.io/envseal/) &middot; 📦 [PyPI](https://pypi.org/project/envseal-vault/) &middot; 🤖 [AI agent 指南](docs/ai-agents.md)
 
 [English](README.md) | [中文](README.zh-CN.md)
 
