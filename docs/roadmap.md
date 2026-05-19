@@ -9,6 +9,7 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
 - `pull` temp-file mode: honest message, `0600` permissions
 - `status` / `diff` / `pull`: friendly errors instead of tracebacks
 - Scanner ignores `.backup`, `.example` and `.sample` files
+- Scanner reads only each repo's top-level `.env*` files (no nested-`.env` collision)
 
 ## Known rough edges (not yet addressed)
 
@@ -22,9 +23,6 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
   overwrites any existing config; there is no interactive selection.
 - **No `doctor`** — no diagnostic for the sops/age install, key permissions or
   vault state.
-- **Recursive scanning collides** — the scanner walks the whole repo tree, so a
-  nested `.env` (e.g. `sub/dir/.env`) maps to the same vault path as the
-  top-level `.env` and the two overwrite each other.
 - **Shell completion disabled** — `add_completion=False` in the Typer app.
 - **`--env` default is inconsistent** — `push` / `update` default to all
   environments, `diff` / `pull` default to `prod`.

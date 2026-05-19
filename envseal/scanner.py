@@ -32,25 +32,27 @@ class Scanner:
         self.config = scan_config
 
     def scan_repo(self, repo_path: Path) -> list[EnvFile]:
-        """Scan a repository for .env files."""
-        env_files = []
+        """Scan a repository's top-level directory for .env files.
 
-        for path in repo_path.rglob("*"):
-            # Skip if in ignored directory
-            if any(ignored in path.parts for ignored in self.config.ignore_dirs):
-                continue
+        Only the repo root is scanned, never subdirectories: a nested .env
+        (e.g. sub/dir/.env) would otherwise map to the same vault path as the
+        root .env and silently overwrite it. To manage a subdirectory's .env,
+        register that subdirectory as its own repo entry.
+        """
+        env_files: list[EnvFile] = []
+        if not repo_path.is_dir():
+            return env_files
 
+        for path in sorted(repo_path.iterdir()):
             # Skip if not a file
             if not path.is_file():
                 continue
 
-            # Check if matches include patterns
             filename = path.name
 
             # Never treat backup or template files as env files: `pull --replace`
             # writes a <name>.backup copy; *.example / *.sample are templates with
-            # placeholder values, not real secrets. Without this guard a later scan
-            # would ingest them into the vault.
+            # placeholder values, not real secrets.
             if filename.endswith((".backup", ".example", ".sample")):
                 continue
 

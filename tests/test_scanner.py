@@ -140,3 +140,18 @@ def test_scanner_skips_template_files(temp_dir):
     found = {ef.filepath.name for ef in scanner.scan_repo(repo)}
 
     assert found == {".env", ".env.prod"}
+
+
+def test_scanner_scans_top_level_only(temp_dir):
+    """Only the repo root is scanned; nested .env files are not collected."""
+    repo = temp_dir / "repo"
+    (repo / "sub" / "deep").mkdir(parents=True)
+    (repo / ".env").write_text("KEY=root")
+    (repo / "sub" / ".env").write_text("KEY=nested")
+    (repo / "sub" / "deep" / ".env").write_text("KEY=deeper")
+
+    scanner = Scanner(ScanConfig())
+    found = scanner.scan_repo(repo)
+
+    assert len(found) == 1
+    assert found[0].filepath == repo / ".env"
