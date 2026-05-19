@@ -122,3 +122,21 @@ def test_scanner_skips_backup_files(temp_dir):
     assert found == {".env", ".env.prod"}
     assert ".env.backup" not in found
     assert ".env.prod.backup" not in found
+
+
+def test_scanner_skips_template_files(temp_dir):
+    """`.example` / `.sample` template files must not be scanned as env files."""
+    repo = temp_dir / "repo"
+    repo.mkdir()
+
+    (repo / ".env").write_text("KEY=value")
+    (repo / ".env.prod").write_text("KEY=prod")
+    # templates with placeholder values, not real secrets:
+    (repo / ".env.example").write_text("KEY=")
+    (repo / ".env.production.example").write_text("KEY=")
+    (repo / ".env.sample").write_text("KEY=")
+
+    scanner = Scanner(ScanConfig())
+    found = {ef.filepath.name for ef in scanner.scan_repo(repo)}
+
+    assert found == {".env", ".env.prod"}

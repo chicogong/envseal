@@ -47,10 +47,11 @@ class Scanner:
             # Check if matches include patterns
             filename = path.name
 
-            # Never treat backup files as env files: `envseal pull --replace`
-            # writes a <name>.backup copy, and without this guard a later scan
-            # would re-ingest that backup into the vault as a bogus environment.
-            if filename.endswith(".backup"):
+            # Never treat backup or template files as env files: `pull --replace`
+            # writes a <name>.backup copy; *.example / *.sample are templates with
+            # placeholder values, not real secrets. Without this guard a later scan
+            # would ingest them into the vault.
+            if filename.endswith((".backup", ".example", ".sample")):
                 continue
 
             if not any(
