@@ -46,7 +46,10 @@ for r in repo-a repo-b; do
 done
 printf 'API_KEY=a-local\nDB_URL=postgres://localhost/a\n' >"$S/projects/repo-a/.env"
 printf 'API_KEY=a-prod\nDB_URL=postgres://prod/a\nDEBUG=0\n' >"$S/projects/repo-a/.env.prod"
-printf 'API_KEY=b-dev\nDB_URL=postgres://localhost/b\n' >"$S/projects/repo-b/.env.dev"
+# LONG_TOKEN deliberately exceeds 80 cols — guards against --stdout line-wrap
+LONG="$(printf 'A%.0s' {1..130})"
+printf 'API_KEY=b-dev\nDB_URL=postgres://localhost/b\nLONG_TOKEN=%s\n' "$LONG" \
+  >"$S/projects/repo-b/.env.dev"
 printf 'API_KEY=b-prod\nDB_URL=postgres://prod/b\n' >"$S/projects/repo-b/.env.prod"
 
 # --- vault: a git repo cloned from a bare remote ---
@@ -107,6 +110,11 @@ echo "############ [7] pull --stdout — decrypt to stdout ############"
 EV pull repo-a --env prod --stdout >"$S/o7" 2>&1
 cat "$S/o7"
 chk "stdout decrypt has keys" grep -q API_KEY "$S/o7"
+
+echo
+echo "############ [7b] pull --stdout redirected — long value must NOT wrap ############"
+EV pull repo-b --env dev --stdout >"$S/o7b" 2>/dev/null
+chk "long value stays on one line (no wrap)" grep -qx "LONG_TOKEN=$LONG" "$S/o7b"
 
 echo
 echo "############ [8] pull default — temp file, honest message, 0600 ############"

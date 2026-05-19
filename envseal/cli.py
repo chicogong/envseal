@@ -487,11 +487,15 @@ def pull(
     )
 
     if stdout:
+        # Raw write — never through Rich, which line-wraps at the console
+        # width and would corrupt long values when redirected to a file.
+        import sys
+
         for vault_file in vault_files:
             sub = vault_file.parent.relative_to(repo_vault_dir)
             if sub.parts:
-                console.print(f"# --- {sub}/{env_filename} ---")
-            console.print(sops.decrypt(vault_file), end="")
+                sys.stdout.write(f"# --- {sub}/{env_filename} ---\n")
+            sys.stdout.write(sops.decrypt(vault_file))
     elif replace:
         import shutil
 
