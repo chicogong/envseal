@@ -722,7 +722,7 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
     from datetime import datetime
 
     def esc(text: str) -> str:
-        return _html.escape(text, quote=True)
+        return _html.escape(str(text), quote=True)
 
     repo_count = len(overview)
     key_count = sum(len(keys) for entries in overview.values() for _, keys in entries)
@@ -731,19 +731,22 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
     env_count = len(all_envs)
 
     sections: list[str] = []
-    for repo_name in sorted(overview, key=str.lower):
+    for idx, repo_name in enumerate(sorted(overview, key=str.lower)):
         files = overview[repo_name]
         total = sum(len(keys) for _, keys in files)
         safe = esc(repo_name)
         envs = sorted({Path(rel).stem for rel, _ in files})
+        all_keys = sorted({k for _, keys in files for k in keys})
+        search_blob = esc((repo_name + " " + " ".join(all_keys)).lower())
 
-        env_badges = "".join(f'<span class="env">{esc(e)}</span>' for e in envs)
+        env_badges = "".join(f'<span class="tag">{esc(e)}</span>' for e in envs)
         head = (
-            f'<header class="repo-head">'
-            f"<h2>{safe}</h2>"
-            f'<div class="repo-meta">{env_badges}'
-            f'<span class="kcount">{total} keys</span></div>'
-            f"</header>"
+            f'<button class="repo-head" type="button">'
+            f'<span class="caret">&#9656;</span>'
+            f'<span class="repo-name">{safe}</span>'
+            f'<span class="repo-tags">{env_badges}</span>'
+            f'<span class="repo-count">{total}<small>keys</small></span>'
+            f"</button>"
         )
 
         cmd_rows: list[str] = []
@@ -751,17 +754,21 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
             restore = f"envseal pull {repo_name} --env {e} --replace"
             copy = f"envseal pull {repo_name} --env {e} --stdout > {repo_name}-{e}.env"
             cmd_rows.append(
-                f'<div class="cmd-row"><span class="cmd-env">{esc(e)}</span>'
+                f'<div class="cmd-grp"><span class="cmd-env">{esc(e)}</span>'
                 f'<button class="cmd" data-copy="{esc(restore)}" '
-                f'title="Copy — restore into the project directory">'
-                f'<span class="cmd-label">restore</span>'
-                f"<code>{esc(restore)}</code></button>"
+                f'title="Copy &mdash; restore into the project directory">'
+                f'<span class="cmd-tag">restore</span>'
+                f'<code>$ {esc(restore)}</code><span class="cmd-ico">&#9106;</span></button>'
                 f'<button class="cmd" data-copy="{esc(copy)}" '
-                f'title="Copy — write a standalone copy">'
-                f'<span class="cmd-label">copy</span>'
-                f"<code>{esc(copy)}</code></button></div>"
+                f'title="Copy &mdash; write a standalone copy">'
+                f'<span class="cmd-tag">copy</span>'
+                f'<code>$ {esc(copy)}</code><span class="cmd-ico">&#9106;</span></button></div>'
             )
-        howto = f'<details class="howto"><summary>How to retrieve</summary>{"".join(cmd_rows)}</details>'
+        howto = (
+            '<details class="howto"><summary>retrieve commands</summary>'
+            + "".join(cmd_rows)
+            + "</details>"
+        )
 
         file_blocks: list[str] = []
         for rel, keys in files:
@@ -769,231 +776,339 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
                 tags = "".join(f"<code>{esc(k)}</code>" for k in keys)
                 body_html = f'<div class="keys">{tags}</div>'
             else:
-                body_html = '<div class="keys empty">could not read this file</div>'
+                body_html = '<div class="keys empty">!! could not read this file</div>'
             file_blocks.append(
-                f'<div class="file"><div class="file-name">{esc(rel)}'
-                f'<span class="file-count">{len(keys)}</span></div>{body_html}</div>'
+                f'<div class="file"><div class="file-head">'
+                f'<span class="file-path">{esc(rel)}</span>'
+                f'<span class="file-n">{len(keys)}</span></div>{body_html}</div>'
             )
 
+        delay = min(idx, 16) * 45
         sections.append(
-            f'<section class="repo" data-name="{esc(repo_name.lower())}">'
-            f"{head}{howto}{''.join(file_blocks)}</section>"
+            f'<section class="repo" data-search="{search_blob}" '
+            f'style="animation-delay:{delay}ms">'
+            f'{head}<div class="repo-body">{howto}{"".join(file_blocks)}</div></section>'
         )
     body = (
         "\n".join(sections)
         if sections
-        else '<p class="vault-empty">No secrets in the vault yet.</p>'
+        else '<p class="vault-empty">// no secrets in the vault yet</p>'
     )
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     template = """<!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EnvSeal — secrets overview</title>
+<title>EnvSeal // secrets overview</title>
 <style>
-:root {
-  --bg: #f4f5f7; --panel: #ffffff; --panel-2: #f7f8fa; --border: #e4e6ea;
-  --text: #1d1d1f; --muted: #6b7280; --faint: #9aa0a8;
-  --accent: #6366f1; --accent-soft: #eef0ff; --accent-text: #4f46e5;
-  --chip-bg: #f1f2f4; --chip-text: #374151;
-  --ok: #16a34a; --danger: #dc2626;
-  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
-}
 [data-theme="dark"] {
-  --bg: #0d0f13; --panel: #15181e; --panel-2: #1b1f27; --border: #272b34;
-  --text: #e6e8eb; --muted: #9aa0aa; --faint: #6b7280;
-  --accent: #818cf8; --accent-soft: #1e2235; --accent-text: #a5b4fc;
-  --chip-bg: #232730; --chip-text: #c7ccd4;
-  --ok: #4ade80; --danger: #f87171;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  --bg: #0a0b0d; --grid: rgba(255,255,255,.022);
+  --panel: #101217; --panel-2: #15181e; --panel-3: #1a1e26;
+  --line: #23272f; --line-2: #343a44;
+  --text: #d8dbe1; --muted: #888e9a; --faint: #565c67;
+  --accent: #e8b23c; --accent-2: #f1cd76; --accent-dim: rgba(232,178,60,.13);
+  --ok: #5cc97f; --danger: #e7585d;
+}
+[data-theme="light"] {
+  --bg: #e9e7dd; --grid: rgba(40,32,12,.04);
+  --panel: #f6f4ea; --panel-2: #efece0; --panel-3: #e7e3d3;
+  --line: #d2cdb8; --line-2: #b9b297;
+  --text: #262219; --muted: #6a6557; --faint: #989283;
+  --accent: #9a6310; --accent-2: #7e5008; --accent-dim: rgba(154,99,16,.11);
+  --ok: #3f8f55; --danger: #bb3a3e;
 }
 * { box-sizing: border-box; }
+html, body { margin: 0; }
 body {
-  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  margin: 0; background: var(--bg); color: var(--text);
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mono);
+  font-size: 14px; line-height: 1.6; color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
   -webkit-font-smoothing: antialiased;
 }
-.wrap { max-width: 940px; margin: 0 auto; padding: 0 1.1rem 4rem; }
-code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+::selection { background: var(--accent); color: var(--bg); }
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.2rem 1.1rem 5rem; }
+a { color: var(--accent); }
 
-/* hero */
-.hero {
-  background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
-  color: #fff; padding: 2.4rem 0 2rem;
+/* ---- console header ---- */
+.console {
+  border: 1px solid var(--line); border-top: 2px solid var(--accent);
+  background: var(--panel); padding: 1.3rem 1.5rem 1.5rem;
 }
-.hero .wrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 0; }
-.hero h1 { font-size: 1.6rem; margin: 0; font-weight: 650; letter-spacing: -.01em; }
-.hero p { margin: .35rem 0 0; opacity: .85; font-size: .9rem; }
+.titlebar {
+  display: flex; align-items: center; gap: .7rem;
+  border-bottom: 1px solid var(--line); padding-bottom: .7rem; margin-bottom: 1.2rem;
+}
+.brand { color: var(--accent); font-weight: 700; letter-spacing: .22em; font-size: .82rem; }
+.leader { flex: 1; border-bottom: 1px dashed var(--line-2); height: 1px; }
 #theme {
-  background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.28);
-  border-radius: 8px; padding: .4rem .7rem; cursor: pointer; font-size: .85rem;
+  font: inherit; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+  padding: .35rem .7rem; cursor: pointer;
 }
-#theme:hover { background: rgba(255,255,255,.26); }
-
-/* stats */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin: -1.5rem 0 1.6rem; }
-.stat {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: .9rem 1rem; box-shadow: var(--shadow);
+#theme:hover { color: var(--accent); border-color: var(--accent); }
+.headline {
+  font-size: clamp(1.7rem, 4.2vw, 2.5rem); font-weight: 700;
+  letter-spacing: .02em; margin: 0; line-height: 1.1;
 }
-.stat .num { font-size: 1.55rem; font-weight: 680; letter-spacing: -.02em; }
-.stat .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: .1rem; }
+.headline .lock { color: var(--accent); }
+.subline { color: var(--muted); font-size: .8rem; margin-top: .55rem; }
+.subline b { color: var(--text); font-weight: 700; }
 
-/* toolbar */
-.toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: .7rem 0; margin-bottom: .4rem; }
-.search { position: relative; }
-.search svg { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: var(--faint); }
+/* ---- stats ---- */
+.stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--line); border-top: none; background: var(--panel);
+}
+.stat { padding: 1.05rem 1.2rem; border-left: 1px solid var(--line); }
+.stat:first-child { border-left: none; }
+.stat .n { font-size: 2rem; line-height: 1; font-weight: 700; color: var(--accent); }
+.stat .l {
+  font-size: .64rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--faint); margin-top: .45rem;
+}
+
+/* ---- toolbar ---- */
+.toolbar { position: sticky; top: 0; z-index: 9; background: var(--bg); padding: .9rem 0 .5rem; }
+.searchrow { display: flex; gap: .5rem; }
+.search {
+  flex: 1; display: flex; align-items: center;
+  border: 1px solid var(--line); background: var(--panel);
+}
+.search:focus-within { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.search .prompt { color: var(--accent); padding: 0 .1rem 0 .8rem; user-select: none; font-weight: 700; }
 #filter {
-  width: 100%; padding: .7rem .8rem .7rem 2.3rem; font-size: .95rem;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--text);
-  box-shadow: var(--shadow);
+  flex: 1; background: transparent; border: none; color: var(--text);
+  font: inherit; padding: .68rem .7rem; outline: none;
 }
-#filter:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-#empty { color: var(--muted); display: none; padding: 1.5rem; text-align: center; }
-.vault-empty { color: var(--muted); padding: 2rem; text-align: center; }
+#filter::placeholder { color: var(--faint); }
+.btn {
+  font: inherit; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+  background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+  padding: 0 .9rem; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { color: var(--accent); border-color: var(--accent); }
+.countline { color: var(--faint); font-size: .72rem; margin: .55rem 0 .2rem; letter-spacing: .04em; }
+.countline b { color: var(--muted); }
 
-/* project card */
+/* ---- project card ---- */
 .repo {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-  padding: 1.1rem 1.2rem; margin-bottom: .9rem; box-shadow: var(--shadow);
+  border: 1px solid var(--line); background: var(--panel); margin-top: -1px;
+  animation: rise .4s ease both;
 }
-.repo.hidden { display: none; }
-.repo-head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
-.repo-head h2 { font-size: 1.08rem; margin: 0; font-weight: 620; letter-spacing: -.01em; }
-.repo-meta { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
-.env {
-  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-  background: var(--accent-soft); color: var(--accent-text); border-radius: 5px; padding: .12rem .42rem;
+.repo.gone { display: none; }
+.repo:hover { border-color: var(--line-2); position: relative; z-index: 1; }
+@keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+.repo-head {
+  width: 100%; display: flex; align-items: center; gap: .6rem;
+  background: none; border: none; color: inherit; font: inherit;
+  cursor: pointer; padding: .8rem 1rem; text-align: left;
 }
-.kcount { font-size: .78rem; color: var(--muted); background: var(--chip-bg); border-radius: 20px; padding: .14rem .6rem; }
+.repo-head:hover { background: var(--panel-2); }
+.caret { color: var(--accent); transition: transform .16s ease; font-size: .8rem; }
+.repo.open .caret { transform: rotate(90deg); }
+.repo-name { font-weight: 700; font-size: .95rem; }
+.repo-tags { display: flex; gap: .3rem; flex-wrap: wrap; }
+.tag {
+  font-size: .62rem; letter-spacing: .05em; text-transform: uppercase; color: var(--accent);
+}
+.tag::before { content: "["; opacity: .55; }
+.tag::after { content: "]"; opacity: .55; }
+.repo-count { margin-left: auto; color: var(--text); font-weight: 700; font-size: .95rem; }
+.repo-count small { color: var(--faint); font-weight: 400; font-size: .62rem; margin-left: .25rem; letter-spacing: .08em; }
 
-/* how-to */
-.howto { margin: .85rem 0 .2rem; }
+.repo-body { display: none; border-top: 1px solid var(--line); padding: .5rem 1rem 1rem; }
+.repo.open .repo-body { display: block; }
+
+/* ---- how-to ---- */
+.howto { margin: .4rem 0 .2rem; }
 .howto summary {
-  cursor: pointer; font-size: .78rem; color: var(--accent-text); font-weight: 550;
-  list-style: none; user-select: none; width: fit-content;
+  cursor: pointer; list-style: none; user-select: none; width: fit-content;
+  color: var(--muted); font-size: .73rem; letter-spacing: .04em; padding: .2rem 0;
 }
-.howto summary::before { content: "▸ "; }
-.howto[open] summary::before { content: "▾ "; }
-.cmd-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin: .5rem 0; }
+.howto summary::-webkit-details-marker { display: none; }
+.howto summary::before { content: "+ "; color: var(--accent); font-weight: 700; }
+.howto[open] summary::before { content: "- "; }
+.cmd-grp { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .35rem 0; }
 .cmd-env {
-  font-size: .68rem; font-weight: 600; text-transform: uppercase;
-  color: var(--muted); min-width: 3.4rem;
+  font-size: .62rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--faint); min-width: 5.5rem;
 }
 .cmd {
-  display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
-  padding: .3rem .55rem; font-size: .76rem; color: var(--text); max-width: 100%;
+  display: flex; align-items: center; gap: .5rem; cursor: pointer; max-width: 100%;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font: inherit;
+  padding: .34rem .55rem;
 }
 .cmd:hover { border-color: var(--accent); }
-.cmd code { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cmd-label {
-  font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-  color: var(--accent-text); background: var(--accent-soft); border-radius: 4px; padding: .1rem .35rem;
+.cmd code { color: var(--muted); font-size: .73rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-tag {
+  font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--bg); background: var(--accent); padding: .12rem .34rem;
 }
+.cmd-ico { color: var(--faint); font-size: .85rem; }
+.cmd:hover .cmd-ico { color: var(--accent); }
 .cmd.copied { border-color: var(--ok); }
-.cmd.copied .cmd-label { color: var(--ok); background: transparent; }
+.cmd.copied .cmd-tag { background: var(--ok); }
+.cmd.copied .cmd-ico { color: var(--ok); }
 
-/* files + keys */
+/* ---- files + keys ---- */
 .file { margin-top: .85rem; }
-.file-name {
-  font-size: .8rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  display: flex; align-items: center; gap: .45rem; margin-bottom: .35rem;
+.file-head { display: flex; align-items: baseline; gap: .5rem; }
+.file-path { color: var(--accent-2); font-size: .77rem; }
+.file-n {
+  font-size: .62rem; color: var(--faint); border: 1px solid var(--line);
+  padding: 0 .35rem; letter-spacing: .04em;
 }
-.file-count {
-  font-size: .68rem; background: var(--chip-bg); color: var(--chip-text);
-  border-radius: 20px; padding: .04rem .42rem;
-}
-.keys { display: flex; flex-wrap: wrap; gap: .3rem; }
+.file-n::after { content: " keys"; }
+.keys { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
 .keys code {
-  background: var(--chip-bg); color: var(--chip-text); border-radius: 6px;
-  padding: .16rem .46rem; font-size: .76rem;
+  font-size: .73rem; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); padding: .15rem .45rem;
 }
-.keys.empty { color: var(--danger); font-size: .8rem; font-style: italic; }
+.keys code:hover { border-color: var(--line-2); color: var(--accent); }
+.keys.empty { color: var(--danger); font-size: .76rem; }
 
-.note { color: var(--faint); font-size: .78rem; margin-top: 2rem; text-align: center; }
-.note code { background: var(--chip-bg); border-radius: 4px; padding: .05rem .35rem; }
+.vault-empty { color: var(--muted); text-align: center; padding: 3rem; border: 1px dashed var(--line); }
+#empty { display: none; color: var(--muted); text-align: center; padding: 2.5rem; border: 1px dashed var(--line); }
 
-@media (max-width: 620px) {
+.foot {
+  margin-top: 2.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line);
+  color: var(--faint); font-size: .72rem; line-height: 1.8;
+}
+.foot .safe { color: var(--ok); }
+.foot code { color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 0 .3rem; }
+
+@media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
-  .cmd code { max-width: 60vw; }
+  .stat:nth-child(3) { border-left: none; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .repo-count { margin-left: 0; }
+  .cmd code { max-width: 56vw; }
 }
+@media (prefers-reduced-motion: reduce) { .repo { animation: none; } }
 </style></head>
 <body>
-<div class="hero">
-  <div class="wrap">
-    <div>
-      <h1>&#128272; EnvSeal</h1>
-      <p>Secrets overview &middot; key names only &middot; generated __GENERATED__</p>
-    </div>
-    <button id="theme" type="button">&#9789; Theme</button>
-  </div>
-</div>
 <div class="wrap">
-  <div class="stats">
-    <div class="stat"><div class="num">__REPOS__</div><div class="lbl">Projects</div></div>
-    <div class="stat"><div class="num">__KEYS__</div><div class="lbl">Keys</div></div>
-    <div class="stat"><div class="num">__FILES__</div><div class="lbl">Env files</div></div>
-    <div class="stat"><div class="num">__ENVS__</div><div class="lbl">Environments</div></div>
-  </div>
-  <div class="toolbar">
-    <div class="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      <input id="filter" type="search" placeholder="Filter projects by name…" autocomplete="off">
+
+  <div class="console">
+    <div class="titlebar">
+      <span class="brand">ENVSEAL</span>
+      <span class="leader"></span>
+      <button id="theme" type="button">&#9681; theme</button>
+    </div>
+    <h1 class="headline"><span class="lock">&#9919;</span> SECRETS OVERVIEW</h1>
+    <div class="subline">
+      <b>key names only</b> &mdash; no secret values are stored in this file &middot;
+      generated __GENERATED__
     </div>
   </div>
-  <p id="empty">No project matches that filter.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">__REPOS__</div><div class="l">projects</div></div>
+    <div class="stat"><div class="n">__KEYS__</div><div class="l">keys</div></div>
+    <div class="stat"><div class="n">__FILES__</div><div class="l">env files</div></div>
+    <div class="stat"><div class="n">__ENVS__</div><div class="l">environments</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="searchrow">
+      <label class="search">
+        <span class="prompt">&#47;</span>
+        <input id="filter" type="search" autocomplete="off"
+               placeholder="filter by project or key name...">
+      </label>
+      <button id="toggleAll" class="btn" type="button">expand all</button>
+    </div>
+    <div class="countline"><b id="count"></b></div>
+  </div>
+
   __BODY__
-  <p class="note">Key names only — no secret values appear in this file. Safe to share.<br>Generated by <code>envseal report</code>.</p>
+  <p id="empty">// no project matches that filter</p>
+
+  <div class="foot">
+    <span class="safe">&#10003; safe to share</span> &mdash; this file contains key
+    <em>names</em> only; decrypted secret values never touch it.<br>
+    generated by <code>envseal report</code> &middot; retrieve a project with
+    <code>envseal pull &lt;project&gt; --env &lt;env&gt; --replace</code>
+  </div>
 </div>
+
 <script>
 (function () {
   var root = document.documentElement;
   var saved = localStorage.getItem('envseal-theme');
-  var dark = saved ? saved === 'dark'
-    : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  if (saved) root.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches)
+    root.setAttribute('data-theme', 'light');
   document.getElementById('theme').addEventListener('click', function () {
-    dark = !dark;
-    root.setAttribute('data-theme', dark ? 'dark' : 'light');
-    localStorage.setItem('envseal-theme', dark ? 'dark' : 'light');
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('envseal-theme', next);
   });
 
-  var f = document.getElementById('filter');
   var repos = Array.prototype.slice.call(document.querySelectorAll('.repo'));
+  var filter = document.getElementById('filter');
   var empty = document.getElementById('empty');
-  f.addEventListener('input', function () {
-    var q = f.value.trim().toLowerCase();
+  var count = document.getElementById('count');
+  var toggleAll = document.getElementById('toggleAll');
+
+  repos.forEach(function (r) {
+    r.querySelector('.repo-head').addEventListener('click', function () {
+      r.classList.toggle('open');
+    });
+  });
+
+  function refresh() {
+    var q = filter.value.trim().toLowerCase();
     var shown = 0;
     repos.forEach(function (r) {
-      var match = r.dataset.name.indexOf(q) !== -1;
-      r.classList.toggle('hidden', !match);
-      if (match) shown++;
+      var match = !q || r.dataset.search.indexOf(q) !== -1;
+      r.classList.toggle('gone', !match);
+      if (match) {
+        shown++;
+        if (q) r.classList.add('open');
+      }
     });
     empty.style.display = shown ? 'none' : 'block';
+    count.textContent = q
+      ? shown + ' / ' + repos.length + ' projects match'
+      : repos.length + ' projects';
+  }
+  filter.addEventListener('input', refresh);
+  refresh();
+
+  var allOpen = false;
+  toggleAll.addEventListener('click', function () {
+    allOpen = !allOpen;
+    repos.forEach(function (r) { r.classList.toggle('open', allOpen); });
+    toggleAll.textContent = allOpen ? 'collapse all' : 'expand all';
   });
 
   document.querySelectorAll('.cmd').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var text = btn.getAttribute('data-copy');
-      var done = function () {
-        var label = btn.querySelector('.cmd-label');
-        var prev = label.textContent;
+      var flash = function () {
+        var tag = btn.querySelector('.cmd-tag');
+        var prev = tag.textContent;
         btn.classList.add('copied');
-        label.textContent = 'copied';
+        tag.textContent = 'copied';
         setTimeout(function () {
           btn.classList.remove('copied');
-          label.textContent = prev;
+          tag.textContent = prev;
         }, 1400);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () {});
+        navigator.clipboard.writeText(text).then(flash, function () {});
       } else {
         var ta = document.createElement('textarea');
         ta.value = text; document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); done(); } catch (e) {}
+        try { document.execCommand('copy'); flash(); } catch (e) {}
         document.body.removeChild(ta);
       }
     });

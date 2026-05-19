@@ -194,16 +194,43 @@ The `update` command will:
 4. Push selected changes to the vault
 5. Show next steps for git commit/push
 
+### Browse the Vault (`list` / `report`)
+
+Get an overview of every project's secrets — **key names only, decrypted
+values are never shown, kept, or written anywhere.**
+
+```bash
+# Terminal overview — every project, every env file, every key name
+envseal list
+
+# Static HTML dashboard — safe to share, opens with no server
+envseal report                       # writes ./envseal-report.html
+envseal report -o ~/envseal-report.html
+```
+
+The HTML report is a single self-contained file (no network, no server):
+
+- Stat cards — project / key / env-file / environment counts
+- Sticky search that filters by **project name or key name**
+- One collapsible card per project, with environment badges and key chips
+- Click-to-copy `envseal pull` commands for restoring each environment
+- Light / dark theme toggle
+
+Because it contains key *names* only — never values — the report is safe to
+commit, share with teammates, or drop into a wiki.
+
 ## 📚 Commands
 
 | Command | Description | Options |
 |---------|-------------|---------|
 | `envseal init` | Initialize configuration and generate keys | `--root DIR` |
-| `envseal push [repos...]` | Encrypt and push secrets to vault | `--env ENV` |
+| `envseal push [repos...]` | Encrypt and push secrets to vault | `--env ENV`, `--commit`, `--push` |
 | `envseal status` | Show sync status for all repos | - |
-| `envseal update` | Interactively update changed secrets to vault | `--env ENV` |
+| `envseal update` | Interactively update changed secrets to vault | `--env ENV`, `--commit`, `--push` |
 | `envseal diff REPO` | Show key-only changes | `--env ENV` |
 | `envseal pull REPO` | Decrypt and pull from vault | `--env ENV`, `--replace`, `--stdout` |
+| `envseal list` | Browse every project's secrets in the terminal (key names only) | - |
+| `envseal report` | Write a shareable static HTML overview (key names only) | `--output PATH` |
 
 ## 🔄 Push / Status Flow (Key-Only)
 
