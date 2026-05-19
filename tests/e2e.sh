@@ -152,6 +152,18 @@ EV pull repo-a --env local --stdout >"$S/o12" 2>&1
 chk "value round-trips intact" grep -q 'a-local-v2' "$S/o12"
 
 echo
+echo "############ [13] list / report — key-only overview ############"
+EV list >"$S/o13" 2>&1
+cat "$S/o13"
+chk "list shows a repo" grep -q repo-a "$S/o13"
+chk "list shows a key name" grep -q API_KEY "$S/o13"
+chk "list hides values" absent grep -q 'a-local-v2' "$S/o13"
+EV report --output "$S/report.html" >"$S/o13b" 2>&1
+chk "report.html created" test -f "$S/report.html"
+chk "report has a key name" grep -q API_KEY "$S/report.html"
+chk "report hides values" absent grep -q 'a-local-v2' "$S/report.html"
+
+echo
 echo "=================================================================="
 echo "   RESULT:  $PASS passed,  $FAIL failed"
 echo "=================================================================="

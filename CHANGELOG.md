@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `push` and `update` accept `--commit` / `--push` flags that commit (and push) the vault repository automatically; without the flags the manual git steps are printed as before
 - `VaultManager` gained `is_git_repo` / `git_commit` / `git_push` helpers
+- `envseal list` and `envseal report` — browse every project's secrets (key names only, never values); `report` writes a static, shareable HTML overview
 
 ### Changed
 - `push` skips re-encrypting unchanged files, so SOPS's non-deterministic output no longer produces noisy vault git diffs

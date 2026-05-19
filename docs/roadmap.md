@@ -10,6 +10,7 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
 - `status` / `diff` / `pull`: friendly errors instead of tracebacks
 - Scanner ignores `.backup`, `.example` and `.sample` files
 - Nested `.env` files map to distinct vault paths mirroring their location in the repo (no collision with the root `.env`)
+- `envseal list` / `report` — browse the vault (key names only); `report` writes a shareable static HTML overview
 
 ## Known rough edges (not yet addressed)
 
@@ -34,7 +35,7 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
 
 - `envseal run -- <cmd>` — decrypt into the process environment and exec
 - `envseal pull --all` / `restore` — one-shot full-machine restore
-- `envseal list` / `add` / `remove` — manage the repo set without editing YAML
+- `envseal add` / `remove` — manage the repo set without editing YAML
 - `envseal doctor` — environment diagnostics
 - Shell completion
 - `.env.example` template generation
