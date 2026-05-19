@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-19
+
+### Added
+- `push` and `update` accept `--commit` / `--push` flags that commit (and push) the vault repository automatically; without the flags the manual git steps are printed as before
+- `VaultManager` gained `is_git_repo` / `git_commit` / `git_push` helpers
+
+### Changed
+- `push` skips re-encrypting unchanged files, so SOPS's non-deterministic output no longer produces noisy vault git diffs
+
+### Fixed
+- `pull` temp-file mode no longer falsely claims the decrypted file is auto-deleted; the file is created with `0600` permissions and the message is accurate
+- `status`, `diff` and `pull` print a friendly "run envseal init" message instead of a traceback when the config or age key is missing
+- The scanner no longer ingests `.backup` files (left by `pull --replace`) or `.example` / `.sample` template files as real env files
+
 ## [0.2.0] - 2025-12-23
 
 ### Added
@@ -40,5 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.3.0]: https://github.com/chicogong/envseal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/chicogong/envseal/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/chicogong/envseal/releases/tag/v0.1.2
