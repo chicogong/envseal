@@ -729,6 +729,11 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
         total = sum(len(keys) for _, keys in files)
         safe = _html.escape(repo_name)
         rows = [f'<h2 id="{safe}">{safe} <span class="count">{total} keys</span></h2>']
+        envs = sorted({Path(rel).stem for rel, _ in files})
+        cmds = " ".join(
+            f"<code>envseal pull {safe} --env {_html.escape(e)} --replace</code>" for e in envs
+        )
+        rows.append(f'<div class="howto">Retrieve &rarr; {cmds}</div>')
         for rel, keys in files:
             rows.append(f'<div class="file">{_html.escape(rel)}</div>')
             if keys:
@@ -754,6 +759,8 @@ h2 { font-size: 1.05rem; margin: 1.6rem 0 .3rem; border-bottom: 1px solid #eee; 
 .file { color: #555; font-size: .85rem; margin: .6rem 0 .25rem; }
 .keys code { background: #f3f3f5; border-radius: 4px; padding: 1px 6px; margin: 2px; display: inline-block; font-size: .8rem; }
 .keys.empty { color: #c00; font-size: .8rem; }
+.howto { font-size: .78rem; color: #666; margin: .2rem 0 .45rem; }
+.howto code { background: #eef3ff; border-radius: 4px; padding: 1px 6px; font-size: .76rem; }
 .repo.hidden { display: none; }
 #empty { color: #888; display: none; }
 .note { color: #888; font-size: .8rem; margin-top: 2rem; }
