@@ -177,15 +177,41 @@ api-service
   ✓ .env.prod  - 已同步
 ```
 
+### 浏览 vault（`list` / `report`）
+
+查看所有项目的 secrets 总览 —— **只显示 key 名称,解密后的值绝不展示、绝不保存、绝不写入任何地方。**
+
+```bash
+# 终端总览 —— 每个项目、每个 env 文件、每个 key 名称
+envseal list
+
+# 静态 HTML 看板 —— 可分享,无需服务器,双击即开
+envseal report                       # 写入 ./envseal-report.html
+envseal report -o ~/envseal-report.html
+```
+
+HTML 报告是单个自包含文件(无网络、无服务端):
+
+- 数据卡 —— 项目数 / key 数 / env 文件数 / 环境数
+- 吸顶搜索框,可按**项目名或 key 名**过滤
+- 每个项目一张可折叠卡片,带环境徽章和 key 标签
+- 点击即复制的 `envseal pull` 命令,用于还原各环境
+- 明暗主题切换
+
+因为只含 key *名称*、不含值,这份报告可以安全提交、分享给同事、放进 wiki。
+
 ## 📚 命令列表
 
 | 命令 | 说明 | 选项 |
 |------|------|------|
 | `envseal init` | 初始化配置并生成密钥 | `--root DIR` |
-| `envseal push [repos...]` | 加密并推送 secrets 到 vault | `--env ENV` |
+| `envseal push [repos...]` | 加密并推送 secrets 到 vault | `--env ENV`、`--commit`、`--push` |
 | `envseal status` | 查看所有仓库的同步状态 | - |
+| `envseal update` | 交互式批量更新有变化的 secrets 到 vault | `--env ENV`、`--commit`、`--push` |
 | `envseal diff REPO` | 查看某个仓库的 key 变化 | `--env ENV` |
-| `envseal pull REPO` | 从 vault 解密并拉取 | `--env ENV`, `--replace`, `--stdout` |
+| `envseal pull REPO` | 从 vault 解密并拉取 | `--env ENV`、`--replace`、`--stdout` |
+| `envseal list` | 在终端浏览所有项目的 secrets(仅 key 名称) | - |
+| `envseal report` | 生成可分享的静态 HTML 总览(仅 key 名称) | `--output PATH` |
 
 ## 🔄 Push / Status 流程（仅 key）
 

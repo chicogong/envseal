@@ -80,6 +80,10 @@ Push secrets to the vault:
 envseal push
 envseal push my-project api-service
 envseal push --env prod
+
+# Optional: auto-commit (and push) the vault repo
+envseal push --commit
+envseal push --push
 ```
 
 Check status:
@@ -111,9 +115,28 @@ envseal pull my-project --env prod
 # Replace local file (backs up to <file>.backup)
 envseal pull my-project --env prod --replace
 
-# Output to stdout
-envseal pull my-project --env prod --stdout
+# Output to stdout (redirect to a file to get a standalone copy)
+envseal pull my-project --env prod --stdout > my-project-prod.env
 ```
+
+> Note: if one environment of a project spans **multiple `.env` files**
+> (a monorepo), `--stdout` concatenates them — use `--replace`, which
+> restores each file to its original location.
+
+Browse the vault — key names only, never values:
+```bash
+# Terminal overview
+envseal list
+
+# Static HTML dashboard (shareable, opens with no server)
+envseal report                       # writes ./envseal-report.html
+envseal report -o ~/envseal-report.html
+```
+
+The HTML report has stat cards (project / key / env-file / environment
+counts), a search that filters by project or key name, collapsible
+per-project cards, click-to-copy `pull` commands, and a light/dark
+theme toggle. It contains key *names* only, so it is safe to share.
 
 ## 7. Multi-device setup
 

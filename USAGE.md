@@ -182,6 +182,12 @@ envseal push my-project api-service
 
 # 只推送特定环境
 envseal push --env prod
+
+# 推送并自动提交 vault 仓库（可选）
+envseal push --commit
+
+# 推送并自动提交 + 推送 vault 到远端（可选）
+envseal push --push
 ```
 
 **会发生什么：**
@@ -190,7 +196,7 @@ envseal push --env prod
 3. 用 SOPS + age 加密
 4. 写入 `secrets-vault/secrets/<repo>/<env>.env`
 
-**然后提交到 vault：**
+**然后提交到 vault** —— 加了 `--commit` / `--push` 会自动完成这一步;不加则手动：
 ```bash
 cd ~/Github/secrets-vault
 git status
@@ -259,9 +265,29 @@ envseal pull my-project --env prod
 envseal pull my-project --env prod --replace
 # 会备份原文件到 .env.backup
 
-# 输出到标准输出
-envseal pull my-project --env prod --stdout
+# 输出到标准输出（重定向到文件即可得到一份副本）
+envseal pull my-project --env prod --stdout > my-project-prod.env
 ```
+
+> ⚠️ 若某个项目的一个环境对应**多个 `.env` 文件**(monorepo),`--stdout` 会把它们拼接输出;
+> 这种情况请用 `--replace`,它会把每个文件各自还原到原来的位置。
+
+### 浏览 vault（`list` / `report`）
+
+查看所有项目的 secrets 总览 —— **只显示 key 名称,绝不显示解密后的值。**
+
+```bash
+# 终端总览
+envseal list
+
+# 生成静态 HTML 看板(可分享,无需服务器)
+envseal report                       # 写入 ./envseal-report.html
+envseal report -o ~/envseal-report.html
+```
+
+HTML 报告含数据卡(项目/key/env 文件/环境数)、按项目名或 key 名搜索、
+每个项目可折叠卡片、点击即复制的 `pull` 命令、明暗主题切换。因为只含 key
+名称,可以安全分享。
 
 ## 🔐 多设备同步
 
