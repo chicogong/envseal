@@ -160,6 +160,7 @@ chk "list shows a key name" grep -q API_KEY "$S/o13"
 chk "list hides values" absent grep -q 'a-local-v2' "$S/o13"
 EV report --output "$S/report.html" >"$S/o13b" 2>&1
 chk "report.html created" test -f "$S/report.html"
+chk "report shows project/key counts" grep -q 'projects' "$S/report.html"
 chk "report has a key name" grep -q API_KEY "$S/report.html"
 chk "report hides values" absent grep -q 'a-local-v2' "$S/report.html"
 
