@@ -491,11 +491,24 @@ def pull(
         # width and would corrupt long values when redirected to a file.
         import sys
 
+        if len(vault_files) > 1:
+            # Heads-up on stderr (not stdout) so it never lands in a redirect.
+            print(
+                f"# note: {repo_name}/{env} spans {len(vault_files)} env files, "
+                "concatenated below under '# --- path ---' headers; "
+                "use --replace to restore each to its original location.",
+                file=sys.stderr,
+            )
         for vault_file in vault_files:
             sub = vault_file.parent.relative_to(repo_vault_dir)
             if sub.parts:
                 sys.stdout.write(f"# --- {sub}/{env_filename} ---\n")
-            sys.stdout.write(sops.decrypt(vault_file))
+            block = sops.decrypt(vault_file)
+            sys.stdout.write(block)
+            # Guarantee a separator so the next file's header / first key is
+            # never glued onto this file's last value.
+            if block and not block.endswith("\n"):
+                sys.stdout.write("\n")
     elif replace:
         import shutil
 
@@ -753,21 +766,39 @@ def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str
             f"</button>"
         )
 
+        env_file_count: dict[str, int] = {}
+        for rel, _ in files:
+            st = Path(rel).stem
+            env_file_count[st] = env_file_count.get(st, 0) + 1
+
         cmd_rows: list[str] = []
         for e in envs:
             restore = f"envseal pull {repo_name} --env {e} --replace"
-            copy = f"envseal pull {repo_name} --env {e} --stdout > {repo_name}-{e}.env"
-            cmd_rows.append(
+            row = (
                 f'<div class="cmd-grp"><span class="cmd-env">{esc(e)}</span>'
                 f'<button class="cmd" data-copy="{esc(restore)}" '
                 f'title="Copy &mdash; restore into the project directory">'
                 f'<span class="cmd-tag">restore</span>'
                 f'<code>$ {esc(restore)}</code><span class="cmd-ico">&#9106;</span></button>'
-                f'<button class="cmd" data-copy="{esc(copy)}" '
-                f'title="Copy &mdash; write a standalone copy">'
-                f'<span class="cmd-tag">copy</span>'
-                f'<code>$ {esc(copy)}</code><span class="cmd-ico">&#9106;</span></button></div>'
             )
+            if env_file_count[e] == 1:
+                # A single env file — a redirected --stdout copy is a clean
+                # standalone .env, so offer it.
+                copy = f"envseal pull {repo_name} --env {e} --stdout > {repo_name}-{e}.env"
+                row += (
+                    f'<button class="cmd" data-copy="{esc(copy)}" '
+                    f'title="Copy &mdash; write a standalone copy">'
+                    f'<span class="cmd-tag">copy</span>'
+                    f"<code>$ {esc(copy)}</code>"
+                    f'<span class="cmd-ico">&#9106;</span></button>'
+                )
+            else:
+                # Multiple env files — a single redirected file would just
+                # concatenate them; --replace is the only correct retrieval.
+                row += (
+                    f'<span class="cmd-multi">{env_file_count[e]} files &mdash; use restore</span>'
+                )
+            cmd_rows.append(row + "</div>")
         howto = (
             '<details class="howto"><summary>retrieve commands</summary>'
             + "".join(cmd_rows)
@@ -956,6 +987,7 @@ a { color: var(--accent); }
   color: var(--bg); background: var(--accent); padding: .12rem .34rem;
 }
 .cmd-ico { color: var(--faint); font-size: .85rem; }
+.cmd-multi { font-size: .68rem; color: var(--faint); letter-spacing: .03em; }
 .cmd:hover .cmd-ico { color: var(--accent); }
 .cmd.copied { border-color: var(--ok); }
 .cmd.copied .cmd-tag { background: var(--ok); }
