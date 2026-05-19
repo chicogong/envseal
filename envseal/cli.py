@@ -719,85 +719,295 @@ def _collect_overview(
 def _render_report_html(overview: dict[str, list[tuple[str, list[str]]]]) -> str:
     """Render the key-only overview as a self-contained static HTML page."""
     import html as _html
+    from datetime import datetime
+
+    def esc(text: str) -> str:
+        return _html.escape(text, quote=True)
 
     repo_count = len(overview)
     key_count = sum(len(keys) for entries in overview.values() for _, keys in entries)
+    file_count = sum(len(entries) for entries in overview.values())
+    all_envs = {Path(rel).stem for entries in overview.values() for rel, _ in entries}
+    env_count = len(all_envs)
 
     sections: list[str] = []
-    for repo_name in sorted(overview):
+    for repo_name in sorted(overview, key=str.lower):
         files = overview[repo_name]
         total = sum(len(keys) for _, keys in files)
-        safe = _html.escape(repo_name)
-        rows = [f'<h2 id="{safe}">{safe} <span class="count">{total} keys</span></h2>']
+        safe = esc(repo_name)
         envs = sorted({Path(rel).stem for rel, _ in files})
-        restore_cmds = " ".join(
-            f"<code>envseal pull {safe} --env {_html.escape(e)} --replace</code>" for e in envs
+
+        env_badges = "".join(f'<span class="env">{esc(e)}</span>' for e in envs)
+        head = (
+            f'<header class="repo-head">'
+            f"<h2>{safe}</h2>"
+            f'<div class="repo-meta">{env_badges}'
+            f'<span class="kcount">{total} keys</span></div>'
+            f"</header>"
         )
-        copy_cmds = " ".join(
-            f"<code>envseal pull {safe} --env {_html.escape(e)} --stdout &gt; "
-            f"{safe}-{_html.escape(e)}.env</code>"
-            for e in envs
-        )
-        rows.append(f'<div class="howto"><b>Restore into project</b> &rarr; {restore_cmds}</div>')
-        rows.append(f'<div class="howto"><b>Get a copy</b> &rarr; {copy_cmds}</div>')
+
+        cmd_rows: list[str] = []
+        for e in envs:
+            restore = f"envseal pull {repo_name} --env {e} --replace"
+            copy = f"envseal pull {repo_name} --env {e} --stdout > {repo_name}-{e}.env"
+            cmd_rows.append(
+                f'<div class="cmd-row"><span class="cmd-env">{esc(e)}</span>'
+                f'<button class="cmd" data-copy="{esc(restore)}" '
+                f'title="Copy — restore into the project directory">'
+                f'<span class="cmd-label">restore</span>'
+                f"<code>{esc(restore)}</code></button>"
+                f'<button class="cmd" data-copy="{esc(copy)}" '
+                f'title="Copy — write a standalone copy">'
+                f'<span class="cmd-label">copy</span>'
+                f"<code>{esc(copy)}</code></button></div>"
+            )
+        howto = f'<details class="howto"><summary>How to retrieve</summary>{"".join(cmd_rows)}</details>'
+
+        file_blocks: list[str] = []
         for rel, keys in files:
-            rows.append(f'<div class="file">{_html.escape(rel)}</div>')
             if keys:
-                tags = " ".join(f"<code>{_html.escape(k)}</code>" for k in keys)
-                rows.append(f'<div class="keys">{tags}</div>')
+                tags = "".join(f"<code>{esc(k)}</code>" for k in keys)
+                body_html = f'<div class="keys">{tags}</div>'
             else:
-                rows.append('<div class="keys empty">(could not read)</div>')
+                body_html = '<div class="keys empty">could not read this file</div>'
+            file_blocks.append(
+                f'<div class="file"><div class="file-name">{esc(rel)}'
+                f'<span class="file-count">{len(keys)}</span></div>{body_html}</div>'
+            )
+
         sections.append(
-            f'<section class="repo" data-name="{safe.lower()}">' + "\n".join(rows) + "</section>"
+            f'<section class="repo" data-name="{esc(repo_name.lower())}">'
+            f"{head}{howto}{''.join(file_blocks)}</section>"
         )
-    body = "\n".join(sections) if sections else "<p>No secrets in the vault yet.</p>"
+    body = (
+        "\n".join(sections)
+        if sections
+        else '<p class="vault-empty">No secrets in the vault yet.</p>'
+    )
+    generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     template = """<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>EnvSeal - secrets overview</title>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EnvSeal — secrets overview</title>
 <style>
-body { font: 15px/1.6 -apple-system, system-ui, sans-serif; max-width: 820px; margin: 2rem auto; padding: 0 1rem; color: #1d1d1f; }
-h1 { font-size: 1.4rem; margin-bottom: .2rem; }
-.summary { color: #555; font-size: .9rem; margin: 0 0 1rem; }
-#filter { width: 100%; box-sizing: border-box; padding: .5rem .7rem; font-size: .95rem; border: 1px solid #ccc; border-radius: 6px; margin-bottom: .5rem; }
-h2 { font-size: 1.05rem; margin: 1.6rem 0 .3rem; border-bottom: 1px solid #eee; padding-bottom: .2rem; }
-.count { color: #888; font-weight: normal; font-size: .85rem; }
-.file { color: #555; font-size: .85rem; margin: .6rem 0 .25rem; }
-.keys code { background: #f3f3f5; border-radius: 4px; padding: 1px 6px; margin: 2px; display: inline-block; font-size: .8rem; }
-.keys.empty { color: #c00; font-size: .8rem; }
-.howto { font-size: .78rem; color: #666; margin: .2rem 0 .45rem; }
-.howto code { background: #eef3ff; border-radius: 4px; padding: 1px 6px; font-size: .76rem; }
+:root {
+  --bg: #f4f5f7; --panel: #ffffff; --panel-2: #f7f8fa; --border: #e4e6ea;
+  --text: #1d1d1f; --muted: #6b7280; --faint: #9aa0a8;
+  --accent: #6366f1; --accent-soft: #eef0ff; --accent-text: #4f46e5;
+  --chip-bg: #f1f2f4; --chip-text: #374151;
+  --ok: #16a34a; --danger: #dc2626;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+}
+[data-theme="dark"] {
+  --bg: #0d0f13; --panel: #15181e; --panel-2: #1b1f27; --border: #272b34;
+  --text: #e6e8eb; --muted: #9aa0aa; --faint: #6b7280;
+  --accent: #818cf8; --accent-soft: #1e2235; --accent-text: #a5b4fc;
+  --chip-bg: #232730; --chip-text: #c7ccd4;
+  --ok: #4ade80; --danger: #f87171;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+body {
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  margin: 0; background: var(--bg); color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 940px; margin: 0 auto; padding: 0 1.1rem 4rem; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+
+/* hero */
+.hero {
+  background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+  color: #fff; padding: 2.4rem 0 2rem;
+}
+.hero .wrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 0; }
+.hero h1 { font-size: 1.6rem; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+.hero p { margin: .35rem 0 0; opacity: .85; font-size: .9rem; }
+#theme {
+  background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.28);
+  border-radius: 8px; padding: .4rem .7rem; cursor: pointer; font-size: .85rem;
+}
+#theme:hover { background: rgba(255,255,255,.26); }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin: -1.5rem 0 1.6rem; }
+.stat {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: .9rem 1rem; box-shadow: var(--shadow);
+}
+.stat .num { font-size: 1.55rem; font-weight: 680; letter-spacing: -.02em; }
+.stat .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: .1rem; }
+
+/* toolbar */
+.toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: .7rem 0; margin-bottom: .4rem; }
+.search { position: relative; }
+.search svg { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: var(--faint); }
+#filter {
+  width: 100%; padding: .7rem .8rem .7rem 2.3rem; font-size: .95rem;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--text);
+  box-shadow: var(--shadow);
+}
+#filter:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+#empty { color: var(--muted); display: none; padding: 1.5rem; text-align: center; }
+.vault-empty { color: var(--muted); padding: 2rem; text-align: center; }
+
+/* project card */
+.repo {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.1rem 1.2rem; margin-bottom: .9rem; box-shadow: var(--shadow);
+}
 .repo.hidden { display: none; }
-#empty { color: #888; display: none; }
-.note { color: #888; font-size: .8rem; margin-top: 2rem; }
+.repo-head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+.repo-head h2 { font-size: 1.08rem; margin: 0; font-weight: 620; letter-spacing: -.01em; }
+.repo-meta { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.env {
+  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  background: var(--accent-soft); color: var(--accent-text); border-radius: 5px; padding: .12rem .42rem;
+}
+.kcount { font-size: .78rem; color: var(--muted); background: var(--chip-bg); border-radius: 20px; padding: .14rem .6rem; }
+
+/* how-to */
+.howto { margin: .85rem 0 .2rem; }
+.howto summary {
+  cursor: pointer; font-size: .78rem; color: var(--accent-text); font-weight: 550;
+  list-style: none; user-select: none; width: fit-content;
+}
+.howto summary::before { content: "▸ "; }
+.howto[open] summary::before { content: "▾ "; }
+.cmd-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin: .5rem 0; }
+.cmd-env {
+  font-size: .68rem; font-weight: 600; text-transform: uppercase;
+  color: var(--muted); min-width: 3.4rem;
+}
+.cmd {
+  display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
+  padding: .3rem .55rem; font-size: .76rem; color: var(--text); max-width: 100%;
+}
+.cmd:hover { border-color: var(--accent); }
+.cmd code { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-label {
+  font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--accent-text); background: var(--accent-soft); border-radius: 4px; padding: .1rem .35rem;
+}
+.cmd.copied { border-color: var(--ok); }
+.cmd.copied .cmd-label { color: var(--ok); background: transparent; }
+
+/* files + keys */
+.file { margin-top: .85rem; }
+.file-name {
+  font-size: .8rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: flex; align-items: center; gap: .45rem; margin-bottom: .35rem;
+}
+.file-count {
+  font-size: .68rem; background: var(--chip-bg); color: var(--chip-text);
+  border-radius: 20px; padding: .04rem .42rem;
+}
+.keys { display: flex; flex-wrap: wrap; gap: .3rem; }
+.keys code {
+  background: var(--chip-bg); color: var(--chip-text); border-radius: 6px;
+  padding: .16rem .46rem; font-size: .76rem;
+}
+.keys.empty { color: var(--danger); font-size: .8rem; font-style: italic; }
+
+.note { color: var(--faint); font-size: .78rem; margin-top: 2rem; text-align: center; }
+.note code { background: var(--chip-bg); border-radius: 4px; padding: .05rem .35rem; }
+
+@media (max-width: 620px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .cmd code { max-width: 60vw; }
+}
 </style></head>
 <body>
-<h1>&#128272; EnvSeal - secrets overview</h1>
-<p class="summary"><strong>__REPOS__</strong> projects &middot; <strong>__KEYS__</strong> keys &middot; key names only</p>
-<input id="filter" type="search" placeholder="Filter projects by name...">
-<p id="empty">No project matches that filter.</p>
-__BODY__
-<p class="note">Key names only - no secret values appear in this file. Safe to share. Generated by <code>envseal report</code>.</p>
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <h1>&#128272; EnvSeal</h1>
+      <p>Secrets overview &middot; key names only &middot; generated __GENERATED__</p>
+    </div>
+    <button id="theme" type="button">&#9789; Theme</button>
+  </div>
+</div>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="num">__REPOS__</div><div class="lbl">Projects</div></div>
+    <div class="stat"><div class="num">__KEYS__</div><div class="lbl">Keys</div></div>
+    <div class="stat"><div class="num">__FILES__</div><div class="lbl">Env files</div></div>
+    <div class="stat"><div class="num">__ENVS__</div><div class="lbl">Environments</div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input id="filter" type="search" placeholder="Filter projects by name…" autocomplete="off">
+    </div>
+  </div>
+  <p id="empty">No project matches that filter.</p>
+  __BODY__
+  <p class="note">Key names only — no secret values appear in this file. Safe to share.<br>Generated by <code>envseal report</code>.</p>
+</div>
 <script>
-const f = document.getElementById('filter');
-const repos = Array.from(document.querySelectorAll('.repo'));
-const empty = document.getElementById('empty');
-f.addEventListener('input', function () {
-  const q = f.value.trim().toLowerCase();
-  let shown = 0;
-  repos.forEach(function (r) {
-    const match = r.dataset.name.indexOf(q) !== -1;
-    r.classList.toggle('hidden', !match);
-    if (match) shown++;
+(function () {
+  var root = document.documentElement;
+  var saved = localStorage.getItem('envseal-theme');
+  var dark = saved ? saved === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('theme').addEventListener('click', function () {
+    dark = !dark;
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    localStorage.setItem('envseal-theme', dark ? 'dark' : 'light');
   });
-  empty.style.display = shown ? 'none' : 'block';
-});
+
+  var f = document.getElementById('filter');
+  var repos = Array.prototype.slice.call(document.querySelectorAll('.repo'));
+  var empty = document.getElementById('empty');
+  f.addEventListener('input', function () {
+    var q = f.value.trim().toLowerCase();
+    var shown = 0;
+    repos.forEach(function (r) {
+      var match = r.dataset.name.indexOf(q) !== -1;
+      r.classList.toggle('hidden', !match);
+      if (match) shown++;
+    });
+    empty.style.display = shown ? 'none' : 'block';
+  });
+
+  document.querySelectorAll('.cmd').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var text = btn.getAttribute('data-copy');
+      var done = function () {
+        var label = btn.querySelector('.cmd-label');
+        var prev = label.textContent;
+        btn.classList.add('copied');
+        label.textContent = 'copied';
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          label.textContent = prev;
+        }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
 </script>
 </body></html>
 """
     return (
         template.replace("__REPOS__", str(repo_count))
         .replace("__KEYS__", str(key_count))
+        .replace("__FILES__", str(file_count))
+        .replace("__ENVS__", str(env_count))
+        .replace("__GENERATED__", esc(generated))
         .replace("__BODY__", body)
     )
 
