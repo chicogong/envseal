@@ -165,7 +165,11 @@ sops --version
 ### Installation
 
 ```bash
-# Install with pipx (recommended)
+# macOS via Homebrew (installs age & sops automatically)
+brew tap chicogong/tap
+brew install envseal
+
+# Or with pipx (recommended for multi-platform)
 pipx install envseal-vault
 
 # Or with pip

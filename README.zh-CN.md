@@ -143,6 +143,10 @@ sops --version
 ### 安装 EnvSeal
 
 ```bash
+# macOS 通过 Homebrew 安装（自动安装 age 和 sops 依赖）
+brew tap chicogong/tap
+brew install envseal
+
 # 使用 pipx 全局安装（推荐）
 pipx install envseal-vault
 
