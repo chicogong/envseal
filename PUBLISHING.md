@@ -1,10 +1,20 @@
 # Publishing to PyPI
 
-## Prerequisites
+## Release authentication
 
-1. **PyPI Account**: Register at https://pypi.org/account/register/
-2. **API Token**: Create at https://pypi.org/manage/account/token/
-3. **Install tools**: `pipx install build twine`
+Production releases use PyPI Trusted Publishing through
+`.github/workflows/publish.yml`. No PyPI API token is stored in GitHub or on a
+maintainer machine.
+
+Configure the `envseal-vault` project once in PyPI:
+
+- Owner: `chicogong`
+- Repository: `envseal`
+- Workflow: `publish.yml`
+- Environment: `pypi`
+
+The GitHub workflow receives a short-lived OIDC identity only when a GitHub
+Release is published.
 
 ## Build Process
 
@@ -43,33 +53,12 @@ Checking dist/envseal_vault-0.1.0.tar.gz: PASSED
 
 ## Publishing
 
-### Test on TestPyPI (Recommended First)
-
-1. **Register on TestPyPI**: https://test.pypi.org/account/register/
-
-2. **Upload to TestPyPI**:
-   ```bash
-   pipx run twine upload --repository testpypi dist/*
-   ```
-
-3. **Test Installation**:
-   ```bash
-   pip install --index-url https://test.pypi.org/simple/ envseal-vault
-   ```
-
-### Publish to PyPI
-
-1. **Upload**:
-   ```bash
-   pipx run twine upload dist/*
-   ```
-
-2. **Enter credentials**:
-   - Username: `__token__`
-   - Password: Your PyPI API token (starts with `pypi-`)
-
-3. **Verify**:
-   Visit https://pypi.org/project/envseal-vault/
+1. Merge the verified release commit into `master` and wait for CI.
+2. Create and push the signed-off version tag, for example `v0.4.0`.
+3. Publish a GitHub Release for that tag.
+4. The `Publish to PyPI` workflow rebuilds, tests, validates, and uploads the
+   package using OIDC.
+5. Verify both PyPI metadata and a clean installation in an isolated venv.
 
 ### After Publishing
 
@@ -79,17 +68,8 @@ Checking dist/envseal_vault-0.1.0.tar.gz: PASSED
    envseal --version
    ```
 
-2. **Create Git Tag**:
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-
-3. **Create GitHub Release**:
-   - Go to https://github.com/chicogong/envseal/releases
-   - Click "Draft a new release"
-   - Select the tag
-   - Add release notes
+2. Confirm the GitHub Actions `Publish to PyPI` run succeeded.
+3. Confirm the PyPI files were built from the same release tag.
 
 ## Updating the Package
 
@@ -123,22 +103,12 @@ pipx run build
 pipx run twine upload dist/*
 ```
 
-## Configuration File (~/.pypirc)
+## Emergency manual publishing
 
-Optional, to avoid entering credentials each time:
-
-```ini
-[pypi]
-username = __token__
-password = pypi-YOUR_TOKEN_HERE
-
-[testpypi]
-repository = https://test.pypi.org/legacy/
-username = __token__
-password = pypi-YOUR_TESTPYPI_TOKEN_HERE
-```
-
-**⚠️ Important**: Never commit `.pypirc` to Git!
+Manual token uploads are not the default. If Trusted Publishing is unavailable,
+stop and diagnose the workflow rather than creating a broad account token. Any
+emergency project-scoped token must be short-lived, entered outside shell argv,
+and revoked immediately after verification.
 
 ## Checklist Before Publishing
 
@@ -148,7 +118,7 @@ password = pypi-YOUR_TESTPYPI_TOKEN_HERE
 - [ ] CHANGELOG updated (if you have one)
 - [ ] README accurate
 - [ ] Built packages validated (`twine check dist/*`)
-- [ ] Tested on TestPyPI first
+- [ ] PyPI Trusted Publisher matches owner/repository/workflow/environment
 - [ ] Git committed and tagged
 
 ## Troubleshooting
