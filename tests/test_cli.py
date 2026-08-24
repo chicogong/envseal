@@ -79,6 +79,7 @@ def test_secret_list_verify_reports_stale_metadata_without_reading_value(monkeyp
         updated_at="2026-08-24T00:00:00+00:00",
     )
     monkeypatch.setattr(SecretCatalog, "list", lambda self: [item])
+    monkeypatch.setattr(KeychainStore, "available", lambda self: True)
     monkeypatch.setattr(KeychainStore, "contains", lambda self, reference: False)
 
     result = runner.invoke(app, ["secret", "list", "--verify"])
