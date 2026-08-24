@@ -150,5 +150,5 @@ class InteractiveSelector:
             # Windows fallback
             import msvcrt
 
-            key = msvcrt.getch().decode("utf-8", errors="ignore")
-            return key
+            key = msvcrt.getch().decode("utf-8", errors="ignore")  # type: ignore[attr-defined]
+            return str(key)

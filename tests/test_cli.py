@@ -3,6 +3,7 @@
 from typer.testing import CliRunner
 
 from envseal import __version__
+from envseal.broker import SecretBroker
 from envseal.cli import app
 from envseal.config import Config
 
@@ -43,3 +44,27 @@ def test_pull_without_config_exits_cleanly(temp_dir, monkeypatch):
 
     assert result.exit_code == 1
     assert "Run 'envseal init'" in result.output
+
+
+def test_run_prompt_injects_one_command_without_printing_value(monkeypatch):
+    """The CLI passes a prompted value to the broker but never renders it."""
+    captured = {}
+
+    monkeypatch.setattr("getpass.getpass", lambda prompt: "temporary-test-value")
+
+    def fake_run(self, command, bindings, prompted):
+        captured["command"] = command
+        captured["bindings"] = bindings
+        captured["prompted"] = dict(prompted)
+        return 0
+
+    monkeypatch.setattr(SecretBroker, "run", fake_run)
+    result = runner.invoke(app, ["run", "--prompt", "TEMP_TOKEN", "--", "demo", "--flag"])
+
+    assert result.exit_code == 0
+    assert captured == {
+        "command": ["demo", "--flag"],
+        "bindings": [],
+        "prompted": {"TEMP_TOKEN": "temporary-test-value"},
+    }
+    assert "temporary-test-value" not in result.output

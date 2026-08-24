@@ -2,7 +2,7 @@
 
 # 🔐 EnvSeal
 
-**Secure, centralized environment variable management for the AI coding era**
+**Local-first developer secrets for the AI coding era**
 
 [![PyPI](https://img.shields.io/pypi/v/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
 [![Python Version](https://img.shields.io/pypi/pyversions/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
@@ -42,11 +42,12 @@ Scan repos → Normalize .env → Encrypt with SOPS → Unified Git vault → On
 
 ## 📖 What is EnvSeal?
 
-EnvSeal is a CLI tool that helps you manage `.env` files across multiple repositories with **end-to-end encryption**. It scans your projects, normalizes environment files, and syncs them to a Git-backed vault using SOPS encryption.
+EnvSeal is a local-first CLI for developer API keys and `.env` files. Secrets that must never reach GitHub stay in macOS Keychain or exist only for one command; portable ciphertext can optionally use a user-controlled SOPS + age vault.
 
 **Key Benefits:**
 - 🔒 **Secure**: SOPS + age encryption (modern, battle-tested)
-- 📦 **Centralized**: One vault for all secrets across unlimited projects
+- 🗝️ **Local-first**: Keychain-backed API keys and one-shot in-memory values
+- 📦 **Optional portability**: One encrypted vault for explicitly syncable secrets
 - 🔍 **Safe Diffs**: Key-only diffs never expose values
 - 🔄 **Version Control**: Full Git history for audit and rollback
 - 🚀 **Simple**: One command to sync everything
@@ -59,13 +60,51 @@ graph LR
   Dev((Developer))
   CLI[EnvSeal CLI]
   Repos[[Projects<br/>.env* files]]
+  Keychain[(macOS Keychain<br/>local only)]
   Vault[(Private secrets-vault<br/>Git repo)]
-  Dev -->|init / push / pull| CLI
+  Process[Trusted child process]
+  Dev -->|put / run / push / pull| CLI
+  CLI -->|reference only| Keychain
+  Keychain -->|just-in-time value| CLI
+  CLI -->|inject for one run| Process
   CLI -->|scan & normalize .env*| Repos
   CLI -->|encrypt via SOPS+age| Vault
   Vault -->|pull decrypt| CLI
   CLI -->|write .env to temp or project| Dev
 ```
+
+### Local-only developer secrets
+
+Secrets that must never reach GitHub can stay in the local macOS Keychain:
+
+```bash
+# macOS shows a hidden native prompt; the value is never placed in argv.
+# Later reads remain subject to macOS Keychain approval.
+envseal secret put my-app/prod/OPENAI_API_KEY
+
+# AI and shell history see only the reference; one trusted child gets the value
+envseal run --secret OPENAI_API_KEY=my-app/prod/OPENAI_API_KEY -- python app.py
+
+# One-shot token: held only for this invocation, never added to Keychain or disk
+envseal run --prompt TEMP_TOKEN -- ./deploy-once
+
+# Inspect names/backends only; values are never listed
+envseal secret list
+```
+
+Install a redacted staged-change guard explicitly in a project:
+
+```bash
+envseal guard install /path/to/project
+envseal guard staged --repo /path/to/project
+```
+
+If Git uses a shared hook manager (for example Lefthook), EnvSeal deliberately
+refuses to overwrite it. Add `envseal guard staged --repo .` to that manager's
+project configuration instead.
+
+The existing SOPS + Git vault remains available for ciphertext users explicitly
+choose to sync. Keychain and prompted secrets are local-only by default.
 
 ## 🎯 Use Cases
 
@@ -86,14 +125,15 @@ Git vault, no server, no account.
 | Multi-repo, one central vault | ✅ scans N repos | ❌ per-repo | ❌ manual | ❌ per-repo | ✅ (hosted) |
 | Encryption | SOPS + age | built-in | SOPS + age/KMS | proprietary | hosted service |
 | Needs a server / account | ❌ no | ❌ no | ❌ no | ✅ yes | ✅ yes |
-| Storage | your Git repo | your repo | your repo | their cloud | their cloud |
+| Storage | local Keychain + optional Git | your repo | your repo | their cloud | their cloud |
 | Key-only diffs (no values) | ✅ | ❌ | ❌ | ❌ | ➖ |
 | One-command machine restore | ✅ `pull` | ❌ | ❌ | ➖ | ➖ |
 | Shareable key-only HTML report | ✅ `report` | ❌ | ❌ | ❌ | ➖ |
 | Cost | free / OSS | free / OSS | free / OSS | freemium | paid tiers |
 
 **Pick EnvSeal if** you have many small projects (the AI-coding reality) and
-want one encrypted, Git-versioned vault you fully own — no SaaS, no lock-in.
+want local-only API keys plus an optional encrypted, Git-versioned vault you
+fully own — no SaaS, no lock-in.
 
 ## 🤖 Using EnvSeal with AI Coding Agents
 

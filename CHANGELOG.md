@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Local macOS Keychain backend for persistent developer API keys. Writes use the native hidden `security` prompt, so values never enter command arguments or EnvSeal's catalog.
+- `envseal run` for just-in-time injection of Keychain references and one-shot prompted values into one trusted child process.
+- Value-free local metadata catalog with private `0700` directory / `0600` file permissions.
+- `envseal guard staged` and `guard install`, backed by Gitleaks with full value redaction and refusal to overwrite existing hooks.
+- `envseal doctor` checks local prerequisites without reading Keychain values or decrypting the legacy SOPS vault.
+
+### Fixed
+- Existing mypy failures in the interactive selector, change collector, and update command.
+
 ## [0.3.2] - 2026-05-19
 
 ### Fixed

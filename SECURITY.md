@@ -2,7 +2,10 @@
 
 ## Overview
 
-EnvSeal is designed to securely manage environment variables across multiple projects using SOPS encryption with age keys.
+EnvSeal manages developer secrets through two explicit trust boundaries:
+
+- **Local-only:** persistent API keys in macOS Keychain and one-shot values held for one command.
+- **Portable ciphertext (opt-in):** `.env` files encrypted with SOPS + age in a user-controlled vault.
 
 ## Security Model
 
@@ -12,12 +15,15 @@ EnvSeal is designed to securely manage environment variables across multiple pro
 - Stores encrypted files in a Git repository
 - Provides key-only diffs (values never exposed in output)
 - Manages age keys securely with proper file permissions
+- Injects local Keychain references into a single trusted child process
+- Blocks staged leaks with Gitleaks and full output redaction
 
 ### What EnvSeal Does NOT Do
 
-- EnvSeal does not store secrets itself (stateless CLI)
+- EnvSeal's local catalog stores only references and timestamps, never values
 - EnvSeal does not transmit secrets over the network (local operations only)
-- EnvSeal does not provide access control (use Git repository permissions)
+- EnvSeal does not make an untrusted command safe: a child receiving a secret can read or leak it
+- Environment-variable injection is a compatibility mechanism; target processes and crash dumps may expose their environment
 
 ## Best Practices
 
@@ -27,6 +33,12 @@ EnvSeal is designed to securely manage environment variables across multiple pro
 - Store backup in a secure location (password manager, encrypted USB, etc.)
 - Never commit age keys to Git
 - Use different age keys for different trust boundaries if sharing vault
+
+### Local Keychain Boundary
+
+- New EnvSeal items are created with no application pre-trusted; macOS mediates later reads.
+- Choosing "Always Allow" in a Keychain prompt weakens this boundary.
+- The current CLI backend protects secrets at rest but is not isolation from malicious code already running as the same logged-in user. A signed native broker with stricter access controls is a future hardening step.
 
 ### 2. Vault Repository Security
 
@@ -59,11 +71,12 @@ To share vault with team members:
    ```
 3. Re-encrypt all files: `sops updatekeys secrets/**/*.env`
 
-### 5. Temporary Files
+### 5. Temporary Values and Files
 
-- Temporary decrypted files are created in `/tmp` with random names
-- Files are automatically cleaned up on process exit
-- Never commit temporary files to Git
+- `envseal run --prompt NAME -- command` keeps a one-shot value in process memory and does not write it to disk.
+- Legacy `pull` temp-file mode writes private `0600` plaintext files and does **not** auto-delete them; remove them as soon as they are no longer needed.
+- Avoid passing values in argv, shell history, logs, or the clipboard.
+- Run only trusted commands with injected secrets.
 
 ## Threat Model
 
@@ -72,12 +85,15 @@ To share vault with team members:
 - ✅ Vault repository leak (files are encrypted)
 - ✅ Accidental secret exposure in Git diffs (key-only diffs)
 - ✅ Unauthorized access to vault (age encryption)
+- ✅ Common accidental staged-secret commits when the optional guard is installed
 
 ### NOT Protected Against
 
 - ❌ Age key compromise (protect your key!)
 - ❌ Malicious code with filesystem access (use trusted code only)
 - ❌ Physical access to unlocked computer (lock your screen)
+- ❌ A malicious or compromised child process receiving an injected secret
+- ❌ Secrets already committed before the guard was installed (revoke and rotate first)
 
 ## Reporting Security Issues
 

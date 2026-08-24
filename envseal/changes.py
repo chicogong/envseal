@@ -69,7 +69,7 @@ class ChangeCollector:
         Returns:
             List of ChangeInfo objects for files with changes
         """
-        changes = []
+        changes: list[ChangeInfo] = []
 
         for repo in self.config.repos:
             repo_changes = self._scan_repo_changes(repo.name, env_filter)
@@ -89,7 +89,7 @@ class ChangeCollector:
         Returns:
             List of ChangeInfo objects for this repository
         """
-        changes = []
+        changes: list[ChangeInfo] = []
 
         # Find the repository object
         repo = next((r for r in self.config.repos if r.name == repo_name), None)

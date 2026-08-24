@@ -2,7 +2,7 @@
 
 # 🔐 EnvSeal
 
-**AI 编程时代的安全、集中式环境变量管理工具**
+**AI 编程时代的本地优先开发密钥管理工具**
 
 [![PyPI](https://img.shields.io/pypi/v/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
 [![Python Version](https://img.shields.io/pypi/pyversions/envseal-vault.svg)](https://pypi.org/project/envseal-vault/)
@@ -42,11 +42,12 @@
 
 ## 📖 EnvSeal 是什么？
 
-EnvSeal 是一个 CLI 工具，帮助你**端到端加密**管理多个项目的 `.env` 文件。它会扫描你的项目，规范化环境变量文件，并使用 SOPS 加密同步到 Git 仓库（vault）中。
+EnvSeal 是一个本地优先的开发密钥 CLI。绝不能进入 GitHub 的 API Key 留在 macOS 钥匙串，临时值只服务于一次命令；只有明确允许同步的密文才选择 SOPS + age vault。
 
 **核心优势：**
 - 🔒 **安全加密**：使用 SOPS + age 加密（现代、经过实战检验）
-- 📦 **集中管理**：一个 vault 管理无限项目的所有密钥
+- 🗝️ **本地优先**：钥匙串保存 API Key，一次性值只驻留本次命令内存
+- 📦 **可选迁移**：仅为明确允许同步的密钥使用加密 vault
 - 🔍 **安全 Diff**：只显示 key 名称，绝不暴露 value
 - 🔄 **版本控制**：完整的 Git 历史，可审计、可回滚
 - 🚀 **操作简单**：一条命令同步所有项目
@@ -59,13 +60,49 @@ graph LR
   Dev((开发者))
   CLI[EnvSeal CLI]
   Repos[[项目<br/>.env* 文件]]
+  Keychain[(macOS 钥匙串<br/>仅本机)]
   Vault[(私有 secrets-vault<br/>Git 仓库)]
-  Dev -->|init / push / pull| CLI
+  Process[受信任子进程]
+  Dev -->|put / run / push / pull| CLI
+  CLI -->|只传引用| Keychain
+  Keychain -->|运行时取值| CLI
+  CLI -->|单次注入| Process
   CLI -->|扫描 & 规范化 .env*| Repos
   CLI -->|SOPS+age 加密| Vault
   Vault -->|pull 解密| CLI
   CLI -->|写回 .env（临时或项目目录）| Dev
 ```
+
+### 绝不进入 GitHub 的开发密钥
+
+必须留在本机的 API Key 可以存入 macOS 钥匙串：
+
+```bash
+# macOS 使用隐藏输入；值不会进入命令参数，后续读取仍受钥匙串授权控制
+envseal secret put my-app/prod/OPENAI_API_KEY
+
+# AI 和 shell 历史只看到引用；只有一个受信任子进程拿到值
+envseal run --secret OPENAI_API_KEY=my-app/prod/OPENAI_API_KEY -- python app.py
+
+# 一次性 Token：只在本次命令内存中持有，不写钥匙串或磁盘
+envseal run --prompt TEMP_TOKEN -- ./deploy-once
+
+# 只查看名称与后端，永不显示值
+envseal secret list
+```
+
+按项目显式安装提交前泄漏拦截：
+
+```bash
+envseal guard install /path/to/project
+envseal guard staged --repo /path/to/project
+```
+
+如果 Git 已配置共享 hook 管理器（例如 Lefthook），EnvSeal 会拒绝覆盖；
+请在该项目的 hook 配置中加入 `envseal guard staged --repo .`。
+
+原有 SOPS + Git vault 继续保留，但只用于用户明确允许同步的密文；
+钥匙串和临时输入默认永远留在本机。
 
 ## 🎯 使用场景
 

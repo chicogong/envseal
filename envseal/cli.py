@@ -8,23 +8,32 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from envseal import __version__
+from envseal.broker import ENV_NAME, SecretBroker, validate_reference
+from envseal.catalog import SecretCatalog
 from envseal.changes import ChangeCollector, ChangeInfo
 from envseal.config import Config, Repo
 from envseal.crypto import AgeKeyManager
 from envseal.diffing import DiffCalculator
 from envseal.dotenvio import DotEnvIO
+from envseal.guard import GitGuard, GuardError
 from envseal.interactive import InteractiveSelector, SelectionItem
+from envseal.keychain import KeychainError, KeychainStore
 from envseal.scanner import Scanner
 from envseal.sops import SopsManager
 from envseal.vault import VaultManager
 
 app = typer.Typer(
     name="envseal",
-    help="Manage encrypted .env files across multiple repositories",
+    help="Manage local developer secrets and optional encrypted .env vaults",
     add_completion=False,
 )
 
 console = Console()
+
+secret_app = typer.Typer(help="Manage local secret references (values are never listed)")
+guard_app = typer.Typer(help="Prevent secrets from entering Git history")
+app.add_typer(secret_app, name="secret")
+app.add_typer(guard_app, name="guard")
 
 
 def version_callback(value: bool) -> None:
@@ -88,7 +97,7 @@ def main(
         help="Show version and exit",
     ),
 ) -> None:
-    """EnvSeal - Manage encrypted .env files across repositories."""
+    """EnvSeal - Local-first developer secret broker and encrypted env vault."""
     pass
 
 
@@ -640,14 +649,16 @@ def update(
     skipped_count = 0
 
     for item in selected:
-        change: ChangeInfo = item.data
-        console.print(f"📁 Checking [cyan]{change.repo_name}/{change.env_name}[/cyan]...")
+        selected_change: ChangeInfo = item.data
+        console.print(
+            f"📁 Checking [cyan]{selected_change.repo_name}/{selected_change.env_name}[/cyan]..."
+        )
 
         try:
             # Re-verify that values are actually different before encrypting
             # This prevents unnecessary re-encryption when only formatting differs
-            local_normalized = dotenv_io.normalize(change.env_file.filepath)
-            vault_decrypted = sops.decrypt(change.vault_path)
+            local_normalized = dotenv_io.normalize(selected_change.env_file.filepath)
+            vault_decrypted = sops.decrypt(selected_change.vault_path)
 
             # Re-calculate diff to ensure values are still different
             current_diff = diff_calc.calculate(vault_decrypted, local_normalized)
@@ -655,13 +666,13 @@ def update(
             # Skip if no actual changes (values might have been changed back)
             if not (current_diff.added or current_diff.modified or current_diff.removed):
                 console.print(
-                    f"  ⊘ [dim]{change.env_name}.env - no changes detected, skipped[/dim]"
+                    f"  ⊘ [dim]{selected_change.env_name}.env - no changes detected, skipped[/dim]"
                 )
                 skipped_count += 1
                 continue
 
             # Ensure vault directory exists
-            change.vault_path.parent.mkdir(parents=True, exist_ok=True)
+            selected_change.vault_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Use temp file for encryption (same pattern as push command)
             import tempfile
@@ -670,14 +681,14 @@ def update(
                 tmp_path = Path(tmp.name)
 
                 # Parse and write normalized
-                data = dotenv_io.parse(change.env_file.filepath)
+                data = dotenv_io.parse(selected_change.env_file.filepath)
                 dotenv_io.write(tmp_path, data)
 
                 # Encrypt
-                sops.encrypt(tmp_path, change.vault_path)
+                sops.encrypt(tmp_path, selected_change.vault_path)
                 tmp_path.unlink()
 
-            console.print(f"  ✓ [green]{change.env_name}.env updated[/green]")
+            console.print(f"  ✓ [green]{selected_change.env_name}.env updated[/green]")
             updated_count += 1
 
         except Exception as e:
@@ -1219,6 +1230,176 @@ def report(
     output.write_text(_render_report_html(overview))
     console.print(f"✅ Report written to [cyan]{output}[/cyan]")
     console.print("[dim]Key names only — no secret values are in this file.[/dim]")
+
+
+@secret_app.command("put")
+def secret_put(
+    reference: str = typer.Argument(..., help="Reference such as project/prod/API_KEY"),
+) -> None:
+    """Prompt in macOS Keychain and store a persistent local secret."""
+    store = KeychainStore()
+    catalog = SecretCatalog()
+    try:
+        validate_reference(reference)
+        store.put_interactive(reference)
+    except (KeychainError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+    console.print(f"✅ Stored [cyan]{reference}[/cyan] in the local macOS Keychain")
+    console.print("[dim]The value was not passed in argv and was not written by EnvSeal.[/dim]")
+    try:
+        catalog.record(reference)
+    except (ValueError, OSError) as exc:
+        console.print(
+            f"[yellow]Keychain write succeeded, but catalog update failed: {exc}[/yellow]"
+        )
+        raise typer.Exit(1)
+
+
+@secret_app.command("list")
+def secret_list() -> None:
+    """List value-free local references and their backends."""
+    catalog = SecretCatalog()
+    try:
+        items = catalog.list()
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+    if not items:
+        console.print("[yellow]No local secret references recorded.[/yellow]")
+        return
+    for item in items:
+        console.print(
+            f"[cyan]{item.reference}[/cyan]  [dim]{item.backend} · {item.updated_at}[/dim]"
+        )
+    console.print("\n[dim]Metadata only — values are never listed.[/dim]")
+
+
+@secret_app.command("remove")
+def secret_remove(
+    reference: str = typer.Argument(..., help="Secret reference to remove"),
+    yes: bool = typer.Option(False, "--yes", help="Skip the confirmation prompt"),
+) -> None:
+    """Remove a local Keychain item and its value-free catalog entry."""
+    if not yes and not typer.confirm(f"Remove {reference} from the local Keychain?"):
+        raise typer.Abort()
+    try:
+        validate_reference(reference)
+        KeychainStore().delete(reference)
+    except (KeychainError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+    console.print(f"✅ Removed [cyan]{reference}[/cyan]")
+    try:
+        SecretCatalog().remove(reference)
+    except (ValueError, OSError) as exc:
+        console.print(
+            f"[yellow]Keychain removal succeeded, but catalog cleanup failed: {exc}[/yellow]"
+        )
+        raise typer.Exit(1)
+
+
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def run(
+    ctx: typer.Context,
+    secret: Optional[list[str]] = typer.Option(
+        None,
+        "--secret",
+        "-s",
+        help="Inject ENV_NAME=project/env/reference from Keychain (repeatable)",
+    ),
+    prompt: Optional[list[str]] = typer.Option(
+        None,
+        "--prompt",
+        "-p",
+        help="Prompt for a temporary ENV_NAME held only for this command (repeatable)",
+    ),
+) -> None:
+    """Run a trusted command with persistent or one-shot secrets injected."""
+    import getpass
+
+    command = list(ctx.args)
+    if command and command[0] == "--":
+        command = command[1:]
+    if not command:
+        console.print("[red]A command is required after '--'.[/red]")
+        raise typer.Exit(2)
+
+    prompted: dict[str, str] = {}
+    try:
+        for name in prompt or []:
+            if not ENV_NAME.fullmatch(name):
+                raise ValueError(f"Invalid environment variable name: {name}")
+            prompted[name] = getpass.getpass(f"Temporary value for {name}: ")
+        exit_code = SecretBroker().run(command, secret or [], prompted)
+    except (KeychainError, ValueError, OSError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+    finally:
+        prompted.clear()
+
+    if exit_code:
+        raise typer.Exit(128 + -exit_code if exit_code < 0 else exit_code)
+
+
+@guard_app.command("staged")
+def guard_staged(
+    repo: Path = typer.Option(Path.cwd(), "--repo", help="Git working tree to scan"),
+) -> None:
+    """Scan staged changes with complete value redaction."""
+    try:
+        clean = GitGuard().scan_staged(repo.resolve())
+    except GuardError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(2)
+    if not clean:
+        console.print("[red]Commit blocked: a possible secret was detected.[/red]")
+        console.print("[yellow]Revoke/rotate it if it was ever committed or shared.[/yellow]")
+        raise typer.Exit(1)
+    console.print("✅ No secrets detected in staged changes")
+
+
+@guard_app.command("install")
+def guard_install(
+    repo: Path = typer.Argument(Path.cwd(), help="Git working tree to protect"),
+) -> None:
+    """Install a pre-commit guard without overwriting an existing hook."""
+    try:
+        hook = GitGuard().install(repo.resolve())
+    except GuardError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1)
+    console.print(f"✅ Installed secret guard: [cyan]{hook}[/cyan]")
+
+
+@app.command()
+def doctor() -> None:
+    """Check local secret-broker prerequisites without reading any values."""
+    store = KeychainStore()
+    catalog = SecretCatalog()
+    guard = GitGuard()
+
+    checks = [
+        ("macOS Keychain client", store.available()),
+        ("Gitleaks staged scanner", guard.available()),
+        ("Private metadata permissions", catalog.permissions_are_private()),
+    ]
+    failed = False
+    for label, ok in checks:
+        marker = "✅" if ok else "❌"
+        console.print(f"{marker} {label}")
+        failed = failed or not ok
+
+    config_path = Config.get_config_path()
+    console.print(
+        f"{'✅' if config_path.exists() else 'INFO'} Legacy SOPS config: "
+        f"{config_path if config_path.exists() else 'not configured (optional)'}"
+    )
+    console.print("[dim]No Keychain values or decrypted vault files were read.[/dim]")
+    if failed:
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

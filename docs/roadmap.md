@@ -14,16 +14,16 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
 
 ## Known rough edges (not yet addressed)
 
-- **No `envseal run`** — secrets can only be written to files, not injected
-  into a process environment.
+- **No cross-command TTL session daemon** — `run --prompt` is memory-only for
+  one invocation; reusable short-lived sessions still need a carefully scoped broker.
 - **`pull` is one repo + one env at a time** — restoring a whole machine means
   many invocations; there is no `pull --all` / `restore`.
 - **No `list` / `add` / `remove`** — the managed-repo set can only be changed
   by re-running `init` (which rebuilds the whole config) or editing the YAML.
 - **`init` is all-or-nothing** — it registers every git repo it finds and
   overwrites any existing config; there is no interactive selection.
-- **No `doctor`** — no diagnostic for the sops/age install, key permissions or
-  vault state.
+- **`doctor` is currently local-broker focused** — deeper SOPS/age and vault
+  integrity diagnostics are still needed.
 - **Shell completion disabled** — `add_completion=False` in the Typer app.
 - **`--env` default is inconsistent** — `push` / `update` default to all
   environments, `diff` / `pull` default to `prod`.
@@ -33,7 +33,8 @@ Known rough edges and planned improvements. Last reviewed 2026-05-19.
 
 ## Planned features
 
-- `envseal run -- <cmd>` — decrypt into the process environment and exec
+- local encrypted non-Git vault backend for portable secrets that must not be pushed
+- optional TTL session daemon with crash-safe expiry and no plaintext persistence
 - `envseal pull --all` / `restore` — one-shot full-machine restore
 - `envseal add` / `remove` — manage the repo set without editing YAML
 - `envseal doctor` — environment diagnostics
