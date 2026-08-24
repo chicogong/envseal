@@ -4,8 +4,10 @@ from typer.testing import CliRunner
 
 from envseal import __version__
 from envseal.broker import SecretBroker
+from envseal.catalog import SecretCatalog, SecretMetadata
 from envseal.cli import app
 from envseal.config import Config
+from envseal.keychain import KeychainStore
 
 runner = CliRunner()
 
@@ -68,3 +70,39 @@ def test_run_prompt_injects_one_command_without_printing_value(monkeypatch):
         "prompted": {"TEMP_TOKEN": "temporary-test-value"},
     }
     assert "temporary-test-value" not in result.output
+
+
+def test_secret_list_verify_reports_stale_metadata_without_reading_value(monkeypatch):
+    item = SecretMetadata(
+        reference="demo/prod/API_KEY",
+        backend="keychain",
+        updated_at="2026-08-24T00:00:00+00:00",
+    )
+    monkeypatch.setattr(SecretCatalog, "list", lambda self: [item])
+    monkeypatch.setattr(KeychainStore, "contains", lambda self, reference: False)
+
+    result = runner.invoke(app, ["secret", "list", "--verify"])
+
+    assert result.exit_code == 0
+    assert "demo/prod/API_KEY" in result.output
+    assert "missing" in result.output
+    assert "stale catalog entry" in result.output
+    assert "--catalog-only" in result.output
+
+
+def test_secret_remove_catalog_only_never_touches_keychain(monkeypatch):
+    removed = []
+    monkeypatch.setattr(SecretCatalog, "remove", lambda self, reference: removed.append(reference))
+
+    def unexpected_delete(self, reference):
+        raise AssertionError("Keychain must not be touched")
+
+    monkeypatch.setattr(KeychainStore, "delete", unexpected_delete)
+    result = runner.invoke(
+        app,
+        ["secret", "remove", "demo/prod/API_KEY", "--catalog-only", "--yes"],
+    )
+
+    assert result.exit_code == 0
+    assert removed == ["demo/prod/API_KEY"]
+    assert "local catalog" in result.output

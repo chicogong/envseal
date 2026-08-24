@@ -89,6 +89,10 @@ envseal run --prompt TEMP_TOKEN -- ./deploy-once
 
 # 只查看名称与后端，永不显示值
 envseal secret list
+
+# 不读取值，只核对钥匙串项目是否存在；显式清理过期目录记录
+envseal secret list --verify
+envseal secret remove my-app/prod/OLD_KEY --catalog-only
 ```
 
 按项目显式安装提交前泄漏拦截：

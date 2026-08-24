@@ -80,6 +80,24 @@ class KeychainStore:
             raise KeychainError(f"Secret reference not found in Keychain: {reference}")
         return result.stdout.rstrip("\n")
 
+    def contains(self, reference: str) -> bool:
+        """Check item presence without requesting or returning its value."""
+        self._require_available()
+        result = subprocess.run(
+            [
+                "security",
+                "find-generic-password",
+                "-a",
+                reference,
+                "-s",
+                self.service,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return result.returncode == 0
+
     def delete(self, reference: str) -> None:
         """Delete a referenced item without ever reading its value."""
         self._require_available()

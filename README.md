@@ -90,6 +90,10 @@ envseal run --prompt TEMP_TOKEN -- ./deploy-once
 
 # Inspect names/backends only; values are never listed
 envseal secret list
+
+# Verify Keychain presence without reading values; clean stale metadata explicitly
+envseal secret list --verify
+envseal secret remove my-app/prod/OLD_KEY --catalog-only
 ```
 
 Install a redacted staged-change guard explicitly in a project:

@@ -110,6 +110,23 @@ def test_keychain_missing_reference_is_value_free(monkeypatch):
     assert "sensitive" not in str(exc.value)
 
 
+def test_keychain_contains_checks_metadata_only(monkeypatch):
+    monkeypatch.setattr(KeychainStore, "available", lambda self: True)
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert KeychainStore().contains("demo/prod/API_KEY") is True
+    assert "-w" not in captured["command"]
+    assert captured["kwargs"]["stdout"] is subprocess.DEVNULL
+    assert captured["kwargs"]["stderr"] is subprocess.DEVNULL
+
+
 def _init_repo(path: Path) -> None:
     subprocess.run(["git", "init", str(path)], check=True, capture_output=True)
 

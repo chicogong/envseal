@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Existing mypy failures in the interactive selector, change collector, and update command.
 
+### Changed
+- Split the local secret, runtime injection, guard, and doctor CLI surface out of the legacy monolithic CLI module for clearer maintenance.
+- `envseal secret list --verify` checks Keychain presence without reading values; stale metadata can be removed explicitly with `secret remove --catalog-only`.
+
 ## [0.3.2] - 2026-05-19
 
 ### Fixed
